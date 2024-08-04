@@ -1,0 +1,17 @@
+torch==2.4.0+cu118
+torchvision==0.19.0+cu118
+torchaudio==2.4.0+cu118
+torchvision
+numpy
+pandas
+tqdm
+lmdb
+opencv-python
+pillow
+tensorboardx
+wandb
+scipy
+tensorboardX>=1.14
+clean-fid
+blobfile
+mpi4py
