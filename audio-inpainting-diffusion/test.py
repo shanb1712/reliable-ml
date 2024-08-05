@@ -1,4 +1,5 @@
 import os
+os.environ['CUDA_VISIBLE_DEVICES']='1'
 import re
 import json
 import hydra
@@ -7,7 +8,6 @@ import torch
 import utils.dnnlib as dnnlib
 from utils.torch_utils import distributed as dist
 import utils.setup as setup
-
 import warnings
 warnings.filterwarnings('ignore', 'Grad strides do not match bucket view strides') # False warning printed by PyTorch 1.12.
 
@@ -42,7 +42,7 @@ def _main(args):
             raise Exception(f"Model directory {args.model_dir} does not exist")
 
     args.exp.model_dir=args.model_dir
-
+    args.dset.path = os.path.join(dirname, args.dset.path)
     torch.multiprocessing.set_start_method('spawn')
 
     diff_params=setup.setup_diff_parameters(args)

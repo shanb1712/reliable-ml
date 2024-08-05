@@ -22,7 +22,7 @@ order: 2 #order of the discretization. Only 1 or 2 for now
 
 filter_out_cqt_DC_Nyq: True
 
-checkpoint: "experiments/54/22k_8s-790000.pt"
+checkpoint: "maestro_22k_8s-750000.pt"
 
 unconditional:
   num_samples: 4
