@@ -21,3 +21,4 @@ cqt_nsgt_pytorch
 einops
 soundfile
 plotly
+matplotlib
