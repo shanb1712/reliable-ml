@@ -15,3 +15,7 @@ tensorboardX>=1.14
 clean-fid
 blobfile
 mpi4py
+jupyter
+hydra-core
+cqt_nsgt_pytorch
+einops
