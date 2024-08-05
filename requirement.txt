@@ -19,3 +19,4 @@ jupyter
 hydra-core
 cqt_nsgt_pytorch
 einops
+soundfile
