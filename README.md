@@ -19,7 +19,7 @@ pip install -r requirements.txt
 ## Pretrained model
 Download musicnet pre-trained model from hugging face
 ```angular2html
-wget -P experiments/cqtdiff+_MUSICNET https://huggingface.co/Eloimoliner/audio-inpainting-diffusion/resolve/main/musicnet_44k_4s-560000.pt
+wget -P experiments/cqtdiff+_MUSICNET https://huggingface.co/Eloimoliner/audio-inpainting-diffusion/resolve/main/maestro_22k_8s-750000.pt
 ```
 
 ## Dataset
