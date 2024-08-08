@@ -4,10 +4,7 @@ import numpy as np
 import torch
 import torch.utils.data as data
 import soundfile as sf
-from torchvision import transforms
-
-from .util.mask import (bbox2mask, brush_stroke_mask, get_irregular_mask,
-                        random_bbox, random_cropping_bbox)
+import utils.training_utils as t_utils
 
 AUD_EXTENSIONS = ['.wav', '.midi']
 
@@ -33,48 +30,54 @@ def make_dataset(dir):
 
 def soundfile_loader(f):
     segnp, fs = sf.read(f)
-    return segnp
+    return segnp, fs
+
+
+def resample_audio(audio, fs, sample_rate, audio_len):
+    # this has been reused from the trainer.py
+    return t_utils.resample_batch(audio, fs, sample_rate, audio_len)
 
 
 class InpaintDataset(data.Dataset):
-    def __init__(self, data_root, sample_rate, mask_config={}, data_len=-1, audio_len=-1, loader=soundfile_loader,
+    def __init__(self, data_root, sample_rate, mask_config={}, load_len=0, data_len=-1, audio_len=-1,
+                 loader=soundfile_loader,
                  sampled_bounds_path=None, skip_n_samples=-1):
         self.audios = make_dataset(data_root)
-
+        self.data_len = data_len  # how many audio to load
+        self.load_len = load_len  # length of segment from the audio
         if skip_n_samples > 0:
             self.audios = self.audios[skip_n_samples:]
-        if data_len > 0:
+        if self.data_len > 0:
             self.audios = self.audios[:int(data_len)]
 
-        # self.tfs = transforms.Compose([
-        #     transforms.Resize((image_size[0], image_size[1])),
-        #     transforms.ToTensor(),
-        #     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-        # ])
         self.loader = loader
-        self.audio_len = audio_len
+        self.audio_len = audio_len  # Final length of audio after resampling
         self.sample_rate = sample_rate
         self.mask_config = mask_config
         self.mask_mode = self.mask_config['mask_mode']
 
+        self.load_dataset()
 
     def __getitem__(self, index):
         ret = {}
-        path = self.audios[index]
-        audio = self.tfs(self.loader(path))
+        original = torch.from_numpy(self.test_samples[index])[None, :]
         mask = self.get_mask()
-        cond_audio = audio * mask + mask * torch.randn_like(audio)
-        mask_audio = audio * mask
 
-        ret['gt_image'] = audio
+        seg = resample_audio(original, torch.from_numpy(np.array(self.f_s[index])), self.sample_rate, self.audio_len)
+        mask_audio = seg * mask
+
+        cond_audio = seg * mask + mask * torch.randn_like(seg)
+
+        ret['gt_image'] = seg
         ret['cond_image'] = cond_audio
         ret['mask_image'] = mask_audio
         ret['mask'] = mask
-        ret['path'] = path.rsplit("/")[-1].rsplit("\\")[-1]
+        ret['path'] = self.audios[index].rsplit("/")[-1].rsplit("\\")[-1]
+
         return ret
 
     def __len__(self):
-        return len(self.audios)
+        return len(self.test_samples)
 
     def tfs(self, audio):
         # Stereo to mono
@@ -82,8 +85,22 @@ class InpaintDataset(data.Dataset):
             audio = np.mean(audio, axis=1)
             return audio
 
+    def load_dataset(self):
+        self.test_samples = []
+        self.filenames = []
+        self.f_s = []
+        for i in range(self.data_len):
+            file = self.audios[i]
+            self.filenames.append(os.path.basename(file))
+            data, samplerate = self.loader(file)
+            data = self.tfs(data)
+
+            self.test_samples.append(data[10 * samplerate:10 * samplerate + self.load_len])  # use only 50s
+            self.f_s.append(samplerate)
+        return
+
     def get_mask(self):
-        mask = torch.ones((1, self.audio_len)).to(self.device)  # assume between 5 and 6s of total length
+        mask = np.ones((1, self.audio_len))  # assume between 5 and 6s of total length
         if self.mask_mode == 'long':
             gap = int(self.mask_config[self.mask_mode]['gap_length'] * self.sample_rate / 1000)
             if self.mask_config[self.mask_mode]['start_gap_idx'] == "none":
@@ -106,7 +123,7 @@ class InpaintDataset(data.Dataset):
         else:
             raise NotImplementedError(
                 f'Mask mode {self.mask_mode} has not been implemented.')
-        return mask
+        return torch.from_numpy(mask)  # 1, L
 
 
 class UncroppingDataset(data.Dataset):
@@ -147,7 +164,7 @@ class UncroppingDataset(data.Dataset):
             return audio
 
     def get_mask(self):
-        mask = torch.ones((1, self.audio_len)).to(self.device)  # assume between 5 and 6s of total length
+        mask = torch.ones((1, self.audio_len))  # assume between 5 and 6s of total length
         if self.mask_mode == 'long':
             gap = int(self.mask_config[self.mask_mode]['gap_length'] * self.sample_rate / 1000)
             if self.mask_config[self.mask_mode]['start_gap_idx'] == "none":
