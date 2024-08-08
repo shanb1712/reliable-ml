@@ -48,8 +48,8 @@
             "which_dataset": {
                 "name": "InpaintDataset", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                    "data_root": "./datasets/maestro-v3.0.0/calibration/ground_truth",
-                    "sampled_bounds_path": "./datasets/maestro-v3.0.0/calibration/sampled_bounds",
+                    "data_root": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/calibration/ground_truth",
+                    "sampled_bounds_path": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/calibration/sampled_bounds",
                     "data_len": 1,
                     "mask_config": {
                         "mask_mode": "center"
@@ -70,8 +70,8 @@
             "which_dataset": {
                 "name": "InpaintDataset", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                    "data_root": "../datasets/maestro-v3.0.0/validation/ground_truth",
-                    "sampled_bounds_path": "../datasets/maestro-v3.0.0/validation/sampled_bounds",
+                    "data_root": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/validation/ground_truth",
+                    "sampled_bounds_path": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/validation/sampled_bounds",
                     "data_len": 1,
                     "mask_config": {
                         "mask_mode": "center"
@@ -92,8 +92,8 @@
             "which_dataset": {
                 "name": "InpaintDataset", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                    "data_root": "./datasets/maestro-v3.0.0/test/ground_truth",
-                    "sampled_bounds_path": "./datasets/maestro-v3.0.0/test/sampled_bounds",
+                    "data_root": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/test/ground_truth",
+                    "sampled_bounds_path": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/test/sampled_bounds",
                     "data_len": 1,
                     "mask_config": {
                         "mask_mode": "center"
