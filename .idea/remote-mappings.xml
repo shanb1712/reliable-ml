@@ -4,6 +4,13 @@
     <list>
       <list>
         <remote-mappings server-id="python@f2d1e0c1-21a6-4d71-beda-d8a6fa86c420" />
+        <remote-mappings server-id="python@sftp://shanybiton@bm@orion02:22/home/shanybiton/miniconda3/envs/conffusion_venv/bin/python3">
+          <settings>
+            <list>
+              <mapping local-root="$PROJECT_DIR$" remote-root="/home/shanybiton/repos/reliable-ML" />
+            </list>
+          </settings>
+        </remote-mappings>
       </list>
     </list>
   </component>

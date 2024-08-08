@@ -1,7 +1,7 @@
 # myself
 .idea/*
 experiments/*
-datasets/*
+../datasets/*
 !experiments/clean.sh
 
 # Byte-compiled / optimized / DLL files
