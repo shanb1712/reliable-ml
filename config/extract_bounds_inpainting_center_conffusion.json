@@ -26,6 +26,7 @@
                 } 
             },
             "dataloader":{
+                "default_file_name": "data.dataset_audio",
                 "validation_split": 2, // percent or number 
                 "args":{ // arguments to initialize train_dataloader
                     "batch_size": 3, // batch size in each gpu
@@ -57,6 +58,7 @@
                 }
             },
             "dataloader":{
+                "default_file_name": "data.dataset_audio",
                 "args":{
                     "batch_size": 1,
                     "num_workers": 1,
@@ -79,6 +81,7 @@
                 }
             },
             "dataloader":{
+                "default_file_name": "data.dataset_audio",
                 "args":{
                     "batch_size": 1,
                     "num_workers": 1,
@@ -101,6 +104,7 @@
                 }
             },
             "dataloader":{
+                "default_file_name": "data.dataset_audio",
                 "args":{
                     "batch_size": 1,
                     "num_workers": 1,
