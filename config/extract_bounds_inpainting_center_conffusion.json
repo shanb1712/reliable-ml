@@ -21,9 +21,8 @@
                     "data_root": "datasets/celebahq/flist/train.flist",
                     "sample_rate": 22050,
                     "audio_len": 184184,
+                    "load_len": 405000,
                     "data_len": -1,
-                    "sample_rate": 22050,
-                    "audio_len": 184184,
                     "mask_config": {
                         "mask_mode": "long",
                         "long": {
@@ -64,9 +63,10 @@
                 "args":{
                     "data_root": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/calibration/ground_truth",
                     "sampled_bounds_path": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/calibration/sampled_bounds",
-                    "data_len": 1,
+                    "data_len": 4,
                     "sample_rate": 22050,
                     "audio_len": 184184,
+                    "load_len": 405000,
                     "mask_config": {
                         "mask_mode": "long",
                         "long": {
@@ -101,6 +101,7 @@
                     "data_len": 1,
                     "sample_rate": 22050,
                     "audio_len": 184184,
+                    "load_len": 405000,
                     "mask_config": {
                         "mask_mode": "long",
                         "long": {
@@ -135,6 +136,7 @@
                     "data_len": 1,
                     "sample_rate": 22050,
                     "audio_len": 184184,
+                    "load_len": 405000,
                     "mask_config": {
                         "mask_mode": "long",
                         "long": {
