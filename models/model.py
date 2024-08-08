@@ -216,15 +216,22 @@ class Palette(BaseModel):
         masking_type = f'{self.opt["datasets"][self.opt["phase"]]["which_dataset"]["args"]["mask_config"]["mask_mode"]}'
         os.makedirs(bounds_path, exist_ok=True)
 
-        res = 256
-        n_img_channels = 3
+        n_img_channels = 0
+        if "audio" in self.opt["datasets"][self.opt["phase"]]["dataloader"]["default_file_name"]:
+            res = self.opt["datasets"][self.opt["phase"]]["which_dataset"]["args"]["audio_len"]
+        else:
+            res = 256
+            n_img_channels = 3
         upper_quantile = 0.95
         lower_quantile = 0.05
         sample_idx = 0
 
         with torch.no_grad():
             for phase_data in tqdm.tqdm(self.phase_loader):
-                calibrations_sample_variations = torch.zeros((n_soch_samples, n_img_channels, res, res))
+                if n_img_channels==0:
+                    calibrations_sample_variations = torch.zeros((n_soch_samples, res))
+                else:
+                    calibrations_sample_variations = torch.zeros((n_soch_samples, n_img_channels, res, res))
 
                 sample_idx += 1
                 for soch_idx in tqdm.tqdm(range(n_soch_samples), desc=f'Stochastic sample for batch {sample_idx-1}', total=n_soch_samples):
