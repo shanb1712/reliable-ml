@@ -19,11 +19,24 @@
                 "name": ["data.dataset", "InpaintDataset"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
                 "args":{ // arguments to initialize dataset
                     "data_root": "datasets/celebahq/flist/train.flist",
+                    "sample_rate": 22050,
+                    "audio_len": 184184,
                     "data_len": -1,
+                    "sample_rate": 22050,
+                    "audio_len": 184184,
                     "mask_config": {
-                        "mask_mode": "hybrid"
+                        "mask_mode": "long",
+                        "long": {
+                            "gap_length": 1500, // in ms
+                            "start_gap_idx": "none"  //in ms, None means at the middle
+                        },
+                        "short": {
+                            "num_gaps": 4,
+                            "gap_length": 25,  // in ms
+                            "start_gap_idx": "none" // in ms, None means random. If not None this should be a list of length num_gaps
+                        }
                     }
-                } 
+                }
             },
             "dataloader":{
                 "default_file_name": "data.dataset_audio",
@@ -52,8 +65,19 @@
                     "data_root": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/calibration/ground_truth",
                     "sampled_bounds_path": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/calibration/sampled_bounds",
                     "data_len": 1,
+                    "sample_rate": 22050,
+                    "audio_len": 184184,
                     "mask_config": {
-                        "mask_mode": "center"
+                        "mask_mode": "long",
+                        "long": {
+                            "gap_length": 1500, // in ms
+                            "start_gap_idx": "none"  //in ms, None means at the middle
+                        },
+                        "short": {
+                            "num_gaps": 4,
+                            "gap_length": 25,  // in ms
+                            "start_gap_idx": "none" // in ms, None means random. If not None this should be a list of length num_gaps
+                        }
                     }
                 }
             },
@@ -75,8 +99,19 @@
                     "data_root": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/validation/ground_truth",
                     "sampled_bounds_path": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/validation/sampled_bounds",
                     "data_len": 1,
+                    "sample_rate": 22050,
+                    "audio_len": 184184,
                     "mask_config": {
-                        "mask_mode": "center"
+                        "mask_mode": "long",
+                        "long": {
+                            "gap_length": 1500, // in ms
+                            "start_gap_idx": "none"  //in ms, None means at the middle
+                        },
+                        "short": {
+                            "num_gaps": 4,
+                            "gap_length": 25,  // in ms
+                            "start_gap_idx": "none" // in ms, None means random. If not None this should be a list of length num_gaps
+                        }
                     }
                 }
             },
@@ -98,8 +133,19 @@
                     "data_root": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/test/ground_truth",
                     "sampled_bounds_path": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/test/sampled_bounds",
                     "data_len": 1,
+                    "sample_rate": 22050,
+                    "audio_len": 184184,
                     "mask_config": {
-                        "mask_mode": "center"
+                        "mask_mode": "long",
+                        "long": {
+                            "gap_length": 1500, // in ms
+                            "start_gap_idx": "none"  //in ms, None means at the middle
+                        },
+                        "short": {
+                            "num_gaps": 4,
+                            "gap_length": 25,  // in ms
+                            "start_gap_idx": "none" // in ms, None means random. If not None this should be a list of length num_gaps
+                        }
                     }
                 }
             },
