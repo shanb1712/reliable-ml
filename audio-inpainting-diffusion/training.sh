@@ -18,7 +18,7 @@ export TORCH_USE_RTLD_GLOBAL=YES
 #export CUDA_LAUNCH_BLOCKING=1
 n=$SLURM_ARRAY_TASK_ID
 
-n=cqtdiff+_MAESTRO #original CQTDiff (with fast implementation) (22kHz)
+n=cqtdiff_maestro #original CQTDiff (with fast implementation) (22kHz)
 
 if [[ $n -eq CQTdiff+_MAESTRO ]] 
 then
