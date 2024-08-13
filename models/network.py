@@ -11,21 +11,12 @@ from tqdm import tqdm
 class Network(BaseNetwork):
     def __init__(self, unet, beta_schedule, module_name='sr3', **kwargs):
         super(Network, self).__init__(**kwargs)
-        if module_name != 'cqtdiff_maestro':
-            if module_name == 'sr3':
-                from .sr3_modules.unet import UNet
-            elif module_name == 'guided_diffusion':
-                from .guided_diffusion_modules.unet import UNet
-            self.denoise_fn = UNet(**unet)
-        else:
-            from .cqtdiff_maestro.unet_cqt_oct_with_projattention_adaLN_2 import Unet_CQT_oct_with_attention as UNet
-            import hydra
-            import utils.setup as setup
-            with hydra.initialize(config_path="../config"):
-                args = hydra.compose(config_name="conf.yaml", return_hydra_config=True)
+        if module_name == 'sr3':
+            from .sr3_modules.unet import UNet
+        elif module_name == 'guided_diffusion':
+            from .guided_diffusion_modules.unet import UNet
 
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            self.denoise_fn = setup.setup_network(args, device)
+        self.denoise_fn = UNet(**unet)
         self.beta_schedule = beta_schedule
 
     def set_loss(self, loss_fn):
