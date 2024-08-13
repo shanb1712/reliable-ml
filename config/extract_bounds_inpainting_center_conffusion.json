@@ -183,7 +183,7 @@
         }, 
         "which_networks": [ // import designated list of networks using arguments
             {
-                "name": ["models.network", "Network"], // import Network() class / function(not recommend) from default file (default is [models/network.py])
+                "name": ["models.audio_network", "Audio_Network"], // import Network() class / function(not recommend) from default file (default is [models/network.py])
                 "args": { // arguments to initialize network
                     "init_type": "kaiming", // method can be [normal | xavier| xavier_uniform | kaiming | orthogonal], default is kaiming
                     "module_name": "cqtdiff_maestro", // sr3 | guided_diffusion | cqtdiff_maestro
