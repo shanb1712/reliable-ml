@@ -72,7 +72,11 @@ class Palette(BaseModel):
         self.mask_image = data.get('mask_image')
         self.path = data['path']
         self.batch_size = len(data['path'])
-    
+        if 'audio' in self.phase_loader.dataset.__module__:
+            self.cond_image, self.gt_image, self.mask, self.mask_image = [torch.squeeze(data, 1) for data in
+                                                                          [self.cond_image, self.gt_image, self.mask,
+                                                                           self.mask_image]]
+
     def get_current_visuals(self, phase='train'):
         dict = {
             'gt_image': (self.gt_image.detach()[:].float().cpu()+1)/2,
@@ -225,8 +229,12 @@ class Palette(BaseModel):
         upper_quantile = 0.95
         lower_quantile = 0.05
         sample_idx = 0
-
+        self.set_input(self.phase_loader.dataset[0])
+        print(self.path)
+        self.output, self.visuals = self.netG.restoration(self.cond_image, y_t=self.cond_image, y_0=self.gt_image,
+                                                          mask=self.mask, sample_num=self.sample_num)
         with torch.no_grad():
+
             for phase_data in tqdm.tqdm(self.phase_loader):
                 if n_img_channels==0:
                     calibrations_sample_variations = torch.zeros((n_soch_samples, res))
