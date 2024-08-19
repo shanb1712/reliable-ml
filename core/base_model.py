@@ -119,7 +119,9 @@ class BaseModel():
         self.logger.info('Beign loading pretrained model [{:s}] ...'.format(network_label))
 
         model_path = "{}_{}.pth".format(self. opt['path']['resume_state'], network_label)
-        
+        if 'Audio' in network_label:
+            model_path = "{}.pt".format(self.opt['path']['resume_state'])
+
         if not os.path.exists(model_path):
             self.logger.warning('Pretrained model in [{:s}] is not existed, Skip it'.format(model_path))
             return
@@ -127,7 +129,10 @@ class BaseModel():
         self.logger.info('Loading pretrained model from [{:s}] ...'.format(model_path))
         if isinstance(network, nn.DataParallel) or isinstance(network, nn.parallel.DistributedDataParallel):
             network = network.module
-        network.load_state_dict(torch.load(model_path, map_location = lambda storage, loc: Util.set_device(storage)), strict=strict)
+        if 'Audio' in network_label:
+            network.load_checkpoint(model_path, map_location=lambda storage, loc: Util.set_device(storage))
+        else:
+            network.load_state_dict(torch.load(model_path, map_location=lambda storage, loc: Util.set_device(storage)), strict=strict)
 
 
         if self.opt['model']['which_networks'][0]['args']['unet']['finetune_bounds']:
