@@ -74,7 +74,7 @@ class Palette(BaseModel):
         self.gt_image = self.set_device(data.get('gt_image'))
         self.mask = self.set_device(data.get('mask'))
         self.mask_image = self.set_device(data.get('mask_image'))
-        self.path = data['path'].rsplit('.wav')[0]
+        self.path = (data['path'][0] if isinstance(data['path'], (list,)) else data['path']).rsplit('.wav')[0]
         self.batch_size = len(data['path'])
         if 'audio' in self.phase_loader.dataset.__module__:
             self.cond_image, self.gt_image, self.mask, self.mask_image = [torch.squeeze(data.type(torch.float32), 1) for
@@ -241,7 +241,7 @@ class Palette(BaseModel):
         lower_quantile = 0.05
         sample_idx = 0
         soch_idx=0
-        self.set_input(self.phase_loader.dataset[0])
+        self.set_input(self.phase_loader.dataset[3])
         self.output, self.visuals = self.netG.restoration(self.cond_image, y_t=self.mask_image,
                                                           y_0=self.gt_image, mask=self.mask,
                                                           sample_num=self.sample_num)
@@ -254,7 +254,7 @@ class Palette(BaseModel):
                                            path=self.netG.paths['inpaintingdegraded'])
 
         with torch.set_grad_enabled(audio_inpainting):
-            # with torch.no_grad():
+        # with torch.no_grad():
 
             for phase_data in tqdm.tqdm(self.phase_loader):
                 if n_img_channels == 0:
@@ -267,7 +267,7 @@ class Palette(BaseModel):
                                           total=n_soch_samples):
                     self.logger.info(f'Sample {sample_idx}, variation {soch_idx}...')
                     self.set_input(phase_data)
-                    self.output, self.visuals = self.netG.restoration(self.cond_image, y_t=self.cond_image,
+                    self.output, self.visuals = self.netG.restoration(self.cond_image, y_t=self.mask_image,
                                                                       y_0=self.gt_image, mask=self.mask,
                                                                       sample_num=self.sample_num)
                     if soch_idx % 10 == 0 and audio_inpainting:  # plot every 10th example
@@ -275,7 +275,7 @@ class Palette(BaseModel):
                                                        path=self.netG.paths['inpaintingreconstructed'])
                         utils_logging.write_audio_file(self.gt_image, self.netG.args.exp.sample_rate, self.path,
                                                        path=self.netG.paths['inpaintingoriginal'])
-                        utils_logging.write_audio_file(self.cond_image, self.netG.args.exp.sample_rate, self.path,
+                        utils_logging.write_audio_file(self.mask_image, self.netG.args.exp.sample_rate, self.path,
                                                        path=self.netG.paths['inpaintingdegraded'])
 
                     calibrations_sample_variations[soch_idx] = self.output.detach().cpu()
