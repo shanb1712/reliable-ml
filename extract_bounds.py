@@ -76,7 +76,7 @@ if __name__ == "__main__":
     parser.add_argument('-p', '--phase', type=str, choices=['calibration', 'validation', 'test'],
                         help='Run train or test', default='calibration')
     parser.add_argument('-b', '--batch', type=int, default=None, help='Batch size in every gpu')
-    parser.add_argument('-gpu', '--gpu_ids', type=str, default=None)
+    parser.add_argument('-gpu', '--gpu_ids', type=str, default='1')
     parser.add_argument('-d', '--debug', action='store_true')
     parser.add_argument('-P', '--port', default='21012', type=str)
     parser.add_argument('--n_soch_samples', type=int, default=200)
