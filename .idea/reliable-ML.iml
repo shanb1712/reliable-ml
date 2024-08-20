@@ -6,7 +6,7 @@
       <excludeFolder url="file://$MODULE_DIR$/audio-inpainting-diffusion" />
       <excludeFolder url="file://$MODULE_DIR$/Conffusion" />
     </content>
-    <orderEntry type="jdk" jdkName="conffusion_venv_orion2" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="conffusion_venve_orion1" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
 </module>
