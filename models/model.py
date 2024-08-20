@@ -240,18 +240,6 @@ class Palette(BaseModel):
         upper_quantile = 0.95
         lower_quantile = 0.05
         sample_idx = 0
-        soch_idx=0
-        self.set_input(self.phase_loader.dataset[3])
-        self.output, self.visuals = self.netG.restoration(self.cond_image, y_t=self.mask_image,
-                                                          y_0=self.gt_image, mask=self.mask,
-                                                          sample_num=self.sample_num)
-        if soch_idx % 10 == 0 and audio_inpainting:  # plot every 10th example
-            utils_logging.write_audio_file(self.output, self.netG.args.exp.sample_rate, self.path,
-                                           path=self.netG.paths['inpaintingreconstructed'])
-            utils_logging.write_audio_file(self.gt_image, self.netG.args.exp.sample_rate, self.path,
-                                           path=self.netG.paths['inpaintingoriginal'])
-            utils_logging.write_audio_file(self.mask_image, self.netG.args.exp.sample_rate, self.path,
-                                           path=self.netG.paths['inpaintingdegraded'])
 
         with torch.set_grad_enabled(audio_inpainting):
         # with torch.no_grad():
@@ -271,12 +259,15 @@ class Palette(BaseModel):
                                                                       y_0=self.gt_image, mask=self.mask,
                                                                       sample_num=self.sample_num)
                     if soch_idx % 10 == 0 and audio_inpainting:  # plot every 10th example
-                        utils_logging.write_audio_file(self.output, self.netG.args.exp.sample_rate, self.path,
-                                                       path=self.netG.paths['inpaintingreconstructed'])
-                        utils_logging.write_audio_file(self.gt_image, self.netG.args.exp.sample_rate, self.path,
-                                                       path=self.netG.paths['inpaintingoriginal'])
-                        utils_logging.write_audio_file(self.mask_image, self.netG.args.exp.sample_rate, self.path,
-                                                       path=self.netG.paths['inpaintingdegraded'])
+                        utils_logging.write_audio_file(self.output, self.netG.args.exp.sample_rate,
+                                                       f"{self.path}_{soch_idx}",
+                                                       path=f"{self.netG.paths['inpaintingreconstructed']}/{self.path}")
+                        utils_logging.write_audio_file(self.gt_image, self.netG.args.exp.sample_rate,
+                                                       f"{self.path}_{soch_idx}",
+                                                       path=f"{self.netG.paths['inpaintingoriginal']}/{self.path}")
+                        utils_logging.write_audio_file(self.mask_image, self.netG.args.exp.sample_rate,
+                                                       f"{self.path}_{soch_idx}",
+                                                       path=f"{self.netG.paths['inpaintingdegraded']}/{self.path}")
 
                     calibrations_sample_variations[soch_idx] = self.output.detach().cpu()
                 sample_upper_bound = torch.quantile(calibrations_sample_variations, upper_quantile, dim=0)
