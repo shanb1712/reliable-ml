@@ -19,15 +19,23 @@ pip install -r requirements.txt
 ## Pretrained model
 Download musicnet pre-trained model from hugging face
 ```angular2html
-wget -P experiments/cqtdiff+_MUSICNET https://huggingface.co/Eloimoliner/audio-inpainting-diffusion/resolve/main/maestro_22k_8s-750000.pt
+wget -P checkpoints/maestro/ https://huggingface.co/Eloimoliner/audio-inpainting-diffusion/resolve/main/maestro_22k_8s-750000.pt
 ```
-
+Update the `resume_state` under `path` in the `extract_bounds_inpainting_center_confussion.json` to the path of the pretrained model.
 ## Dataset
-Download the MAESTRO Dataset V3.0.0
+### Download data
+Download the MAESTRO Dataset V3.0.0 and move the dataset to the `dldata/` directory
 ```angular2html
 wget https://storage.googleapis.com/magentadata/datasets/maestro/v3.0.0/maestro-v3.0.0.zip
 ```
+### Split data
+Split the data to clibration, validation and test by runnning the `create_split.py` file.
 
+## Extract boundaries
+Run the `extract_bounds.py` script for each data split
+```angular2html
+python3 extract_bounds.py -p {calibration/test/validation} -c config/extract_bounds_inpainting_center_conffusion.json --distributed_worker_id 0
+```
 ## Citation
 
 - **Horwitz, Eliahu and Hoshen, Yedid. (2022).** Conffusion: Confidence Intervals for Diffusion Models. *arXiv preprint arXiv:2211.09795*. Available at: [https://arxiv.org/abs/2211.09795](https://arxiv.org/abs/2211.09795)
