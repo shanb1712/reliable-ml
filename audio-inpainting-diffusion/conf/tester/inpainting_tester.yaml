@@ -68,11 +68,11 @@ noise_in_observations_SNR: None
 inpainting:
   mask_mode: "long" #or "short"
   long:
-    gap_length: 1500 #in ms
+    gap_length: 3000 #in ms
     start_gap_idx: None #in ms, None means at the middle
   short:
     num_gaps: 4
-    gap_length: 25 #in ms
+    gap_length: 3000 #in ms
     start_gap_idx: None #in ms, None means random. If not None this should be a list of length num_gaps
 
 spectrogram_inpainting: #specifies a (rectangular for now) mask localized in time and frequency

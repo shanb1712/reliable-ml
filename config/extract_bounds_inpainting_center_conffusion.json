@@ -10,7 +10,7 @@
         "tb_logger": "tb_logger", // path of tensorboard logger
         "results": "results",
         "checkpoint": "checkpoint",
-        "resume_state": "checkpoints/celeba_hq/200"
+        "resume_state": "checkpoints/maestro/maestro_22k_8s-750000"
     },
 
     "datasets": { // train or test
@@ -26,12 +26,12 @@
                     "mask_config": {
                         "mask_mode": "long",
                         "long": {
-                            "gap_length": 1500, // in ms
+                            "gap_length": 250, // in ms
                             "start_gap_idx": "none"  //in ms, None means at the middle
                         },
                         "short": {
                             "num_gaps": 4,
-                            "gap_length": 25,  // in ms
+                            "gap_length": 3000,  // in ms
                             "start_gap_idx": "none" // in ms, None means random. If not None this should be a list of length num_gaps
                         }
                     }
@@ -61,21 +61,21 @@
             "which_dataset": {
                 "name": "InpaintDataset", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                    "data_root": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/calibration/ground_truth",
-                    "sampled_bounds_path": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/calibration/sampled_bounds",
-                    "data_len": 4,
+                    "data_root": "dldata/maestro-v3.0.0/splits/calibration/ground_truth",
+                    "sampled_bounds_path": "dldata/maestro-v3.0.0/splits/calibration/sampled_bounds",
+                    "data_len": -1,
                     "sample_rate": 22050,
                     "audio_len": 184184,
                     "load_len": 405000,
                     "mask_config": {
                         "mask_mode": "long",
                         "long": {
-                            "gap_length": 1500, // in ms
+                            "gap_length": 100, // in ms
                             "start_gap_idx": "none"  //in ms, None means at the middle
                         },
                         "short": {
                             "num_gaps": 4,
-                            "gap_length": 25,  // in ms
+                            "gap_length": 3000,  // in ms
                             "start_gap_idx": "none" // in ms, None means random. If not None this should be a list of length num_gaps
                         }
                     }
@@ -96,8 +96,8 @@
             "which_dataset": {
                 "name": "InpaintDataset", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                    "data_root": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/validation/ground_truth",
-                    "sampled_bounds_path": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/validation/sampled_bounds",
+                    "data_root": "dldata/maestro-v3.0.0/splits/validation/ground_truth",
+                    "sampled_bounds_path": "dldata/maestro-v3.0.0/splits/validation/sampled_bounds",
                     "data_len": 1,
                     "sample_rate": 22050,
                     "audio_len": 184184,
@@ -105,12 +105,12 @@
                     "mask_config": {
                         "mask_mode": "long",
                         "long": {
-                            "gap_length": 1500, // in ms
+                            "gap_length": 250, // in ms
                             "start_gap_idx": "none"  //in ms, None means at the middle
                         },
                         "short": {
                             "num_gaps": 4,
-                            "gap_length": 25,  // in ms
+                            "gap_length": 3000,  // in ms
                             "start_gap_idx": "none" // in ms, None means random. If not None this should be a list of length num_gaps
                         }
                     }
