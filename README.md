@@ -29,7 +29,10 @@ Download the MAESTRO Dataset V3.0.0 and move the dataset to the `dldata/` direct
 wget https://storage.googleapis.com/magentadata/datasets/maestro/v3.0.0/maestro-v3.0.0.zip
 ```
 ### Split data
-Split the data to clibration, validation and test by runnning the `create_split.py` file.
+Split the data to calibration, validation and test sets by running the `create_split.py` script.
+```angular2html
+python3 create_split.py
+```
 
 ## Extract boundaries
 Run the `extract_bounds.py` script for each data split
