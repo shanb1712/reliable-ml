@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="shanybiton@bm@132.68.176.119:22 password (1)" remoteFilesAllowedToDisappearOnAutoupload="false" autoUploadExternalChanges="true">
+  <component name="PublishConfigData" autoUpload="Always" serverName="shanybiton@bm@132.68.176.119:22 password" remoteFilesAllowedToDisappearOnAutoupload="false" autoUploadExternalChanges="true">
     <serverData>
       <paths name="Fwave">
         <serverdata>
@@ -30,6 +30,13 @@
           </mappings>
         </serverdata>
       </paths>
+      <paths name="conffusion">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="iSecg">
         <serverdata>
           <mappings>
@@ -45,13 +52,6 @@
         </serverdata>
       </paths>
       <paths name="shanybiton@bm@132.68.176.119:22 password">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="shanybiton@bm@132.68.176.119:22 password (1)">
         <serverdata>
           <mappings>
             <mapping deploy="/home/shanybiton/repos/reliable-ML" local="$PROJECT_DIR$" />
