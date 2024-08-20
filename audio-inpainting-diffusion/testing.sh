@@ -18,7 +18,7 @@ n=$SLURM_ARRAY_TASK_ID
 
 #maestro
 
-#n=cqtdiff+_MAESTRO #trained on maestro fs=22.05 kHz, audio_len=8s
+#n=cqtdiff_maestro #trained on maestro fs=22.05 kHz, audio_len=8s
 n=cqtdiff+_MUSICNET #trained on musixnet fs=44.1kHz, audio_len=4s
 
 if [[ $n -eq CQTdiff+_MUSICNET ]] 

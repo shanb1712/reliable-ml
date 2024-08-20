@@ -10,7 +10,7 @@ ___
 First, download the pretrained model from <a href="https://drive.google.com/drive/folders/13YZ2UAmGJ-b7DICr-FDAPM7gctreJEoH?usp=sharing"  target="_blank">Google Drive</a> into a dir named `checkpoints/celeba_hq`
 
 ## N-Con*ffusion*
-
+__
 For training N-Con*ffusion* on the task of inpainting, run:
 
 ```

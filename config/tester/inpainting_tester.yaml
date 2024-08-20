@@ -68,7 +68,7 @@ noise_in_observations_SNR: None
 inpainting:
   mask_mode: "long" #or "short"
   long:
-    gap_length: 3000 #in ms
+    gap_length: 100 #in ms
     start_gap_idx: None #in ms, None means at the middle
   short:
     num_gaps: 4

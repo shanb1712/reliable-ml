@@ -1,5 +1,7 @@
 import os
 os.environ['CUDA_VISIBLE_DEVICES']='1'
+os.environ['WANDB_DISABLED'] = 'true'
+
 import re
 import json
 import hydra
