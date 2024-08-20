@@ -98,14 +98,14 @@
                 "args":{
                     "data_root": "dldata/maestro-v3.0.0/splits/validation/ground_truth",
                     "sampled_bounds_path": "dldata/maestro-v3.0.0/splits/validation/sampled_bounds",
-                    "data_len": 1,
+                    "data_len": -1,
                     "sample_rate": 22050,
                     "audio_len": 184184,
                     "load_len": 405000,
                     "mask_config": {
                         "mask_mode": "long",
                         "long": {
-                            "gap_length": 250, // in ms
+                            "gap_length": 100, // in ms
                             "start_gap_idx": "none"  //in ms, None means at the middle
                         },
                         "short": {
@@ -131,21 +131,21 @@
             "which_dataset": {
                 "name": "InpaintDataset", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                    "data_root": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/test/ground_truth",
-                    "sampled_bounds_path": "/old_orion02/home_local/shany/dldata/maestro-v3.0.0/splits/test/sampled_bounds",
-                    "data_len": 1,
+                    "data_root": "dldata/maestro-v3.0.0/splits/test/ground_truth",
+                    "sampled_bounds_path": "dldata/maestro-v3.0.0/splits/test/sampled_bounds",
+                    "data_len": -1,
                     "sample_rate": 22050,
                     "audio_len": 184184,
                     "load_len": 405000,
                     "mask_config": {
                         "mask_mode": "long",
                         "long": {
-                            "gap_length": 1500, // in ms
+                            "gap_length": 100, // in ms
                             "start_gap_idx": "none"  //in ms, None means at the middle
                         },
                         "short": {
                             "num_gaps": 4,
-                            "gap_length": 25,  // in ms
+                            "gap_length": 3000,  // in ms
                             "start_gap_idx": "none" // in ms, None means random. If not None this should be a list of length num_gaps
                         }
                     }
