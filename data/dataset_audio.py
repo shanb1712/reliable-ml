@@ -89,7 +89,7 @@ class InpaintDataset(data.Dataset):
         self.test_samples = []
         self.filenames = []
         self.f_s = []
-        for i in range(self.data_len):
+        for i in range(len(self.audios)):
             file = self.audios[i]
             self.filenames.append(os.path.basename(file))
             data, samplerate = self.loader(file)
