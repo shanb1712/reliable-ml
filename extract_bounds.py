@@ -11,6 +11,7 @@ from data import define_dataloader
 from models import create_model, define_loss, define_metric, define_network
 import hydra
 
+
 def main_worker(gpu, ngpus_per_node, opt, args):
     """  threads running on each GPU """
     if 'local_rank' not in opt:
@@ -18,7 +19,8 @@ def main_worker(gpu, ngpus_per_node, opt, args):
     if opt['distributed']:
         torch.cuda.set_device(int(opt['local_rank']))
         print('using GPU {} for training'.format(int(opt['local_rank'])))
-        torch.distributed.init_process_group(backend = 'nccl',  init_method = opt['init_method'], world_size = opt['world_size'],  rank = opt['global_rank'], group_name='mtorch')
+        torch.distributed.init_process_group(backend='nccl', init_method=opt['init_method'],
+                                             world_size=opt['world_size'], rank=opt['global_rank'], group_name='mtorch')
     '''set seed and and cuDNN environment '''
     torch.backends.cudnn.enabled = True
     warnings.warn('You have chosen to use cudnn for accleration. torch.backends.cudnn.enabled=True')
@@ -26,18 +28,19 @@ def main_worker(gpu, ngpus_per_node, opt, args):
 
     ''' set logger '''
     phase_logger = InfoLogger(opt)
-    phase_writer = VisualWriter(opt, phase_logger)  
+    phase_writer = VisualWriter(opt, phase_logger)
     phase_logger.info('Create the log file in directory {}.\n'.format(opt['path']['experiments_root']))
 
     '''set networks and dataset'''
-    phase_loader, val_loader = define_dataloader(phase_logger, opt) # val_loader is None if phase is test.
+    phase_loader, val_loader = define_dataloader(phase_logger, opt)  # val_loader is None if phase is test.
     networks = [define_network(phase_logger, opt, item_opt) for item_opt in opt['model']['which_networks']]
 
     ''' set metrics, loss, optimizer and  schedulers '''
     metrics = [define_metric(phase_logger, item_opt) for item_opt in opt['model']['which_metrics']]
     losses = [define_loss(phase_logger, item_opt) for item_opt in opt['model']['which_losses']]
 
-    model = create_model(opt = opt, networks = networks, phase_loader = phase_loader, val_loader = val_loader, losses = losses, metrics = metrics, logger = phase_logger, writer = phase_writer, wandb_logger=None)
+    model = create_model(opt=opt, networks=networks, phase_loader=phase_loader, val_loader=val_loader, losses=losses,
+                         metrics=metrics, logger=phase_logger, writer=phase_writer, wandb_logger=None)
     model.netG.set_new_noise_schedule(phase=opt['phase'])
     phase_logger.info('Begin model {}.'.format(opt['phase']))
 
@@ -45,7 +48,6 @@ def main_worker(gpu, ngpus_per_node, opt, args):
 
 
 def _main(args):
-
     opt = Praser.parse(args)
 
     ''' cuda devices '''
@@ -69,6 +71,7 @@ def _main(args):
 def main(args):
     _main(args)
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', type=str, default='config/extract_bounds_inpainting_center_conffusion.json',
@@ -89,4 +92,5 @@ if __name__ == "__main__":
 
     ''' parser configs '''
     args = parser.parse_args()
+
     main(args)

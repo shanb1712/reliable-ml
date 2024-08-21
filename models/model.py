@@ -243,7 +243,6 @@ class Palette(BaseModel):
 
         with torch.set_grad_enabled(audio_inpainting):
         # with torch.no_grad():
-
             for phase_data in tqdm.tqdm(self.phase_loader):
                 if n_img_channels == 0:
                     calibrations_sample_variations = torch.zeros((n_soch_samples, res))
@@ -251,23 +250,17 @@ class Palette(BaseModel):
                     calibrations_sample_variations = torch.zeros((n_soch_samples, n_img_channels, res, res))
 
                 sample_idx += 1
+                self.set_input(phase_data)
+                self.gen_image, self.visuals = self.netG.restoration(self.cond_image, y_t=self.mask_image,
+                                                                     y_0=self.gt_image, mask=self.mask,
+                                                                     sample_num=self.sample_num)
+
                 for soch_idx in tqdm.tqdm(range(n_soch_samples), desc=f'Stochastic sample for batch {sample_idx - 1}',
                                           total=n_soch_samples):
                     self.logger.info(f'Sample {sample_idx}, variation {soch_idx}...')
-                    self.set_input(phase_data)
-                    self.output, self.visuals = self.netG.restoration(self.cond_image, y_t=self.mask_image,
-                                                                      y_0=self.gt_image, mask=self.mask,
+                    self.output, self.visuals = self.netG.restoration(self.cond_image, y_t=self.gen_image,
+                                                                      y_0=self.gt_image,
                                                                       sample_num=self.sample_num)
-                    if soch_idx % 10 == 0 and audio_inpainting:  # plot every 10th example
-                        utils_logging.write_audio_file(self.output, self.netG.args.exp.sample_rate,
-                                                       f"{self.path}_{soch_idx}",
-                                                       path=f"{self.netG.paths['inpaintingreconstructed']}/{self.path}")
-                        utils_logging.write_audio_file(self.gt_image, self.netG.args.exp.sample_rate,
-                                                       f"{self.path}_{soch_idx}",
-                                                       path=f"{self.netG.paths['inpaintingoriginal']}/{self.path}")
-                        utils_logging.write_audio_file(self.mask_image, self.netG.args.exp.sample_rate,
-                                                       f"{self.path}_{soch_idx}",
-                                                       path=f"{self.netG.paths['inpaintingdegraded']}/{self.path}")
 
                     calibrations_sample_variations[soch_idx] = self.output.detach().cpu()
                 sample_upper_bound = torch.quantile(calibrations_sample_variations, upper_quantile, dim=0)

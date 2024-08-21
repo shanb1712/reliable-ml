@@ -327,14 +327,15 @@ class Sampler():
     def predict_inpainting(
         self,
         y_masked,
-        mask
+        mask=None,
         ):
-        self.mask=mask.to(y_masked.device)
+        if mask is not None:
+            self.mask=mask.to(y_masked.device)
 
         self.y=y_masked
 
         self.degradation=lambda x: self.apply_mask(x)
-        if self.data_consistency or self.data_consistency_end:
+        if (self.data_consistency or self.data_consistency_end) and mask is not None:
             if self.smooth:
                 smooth_mask=self.prepare_smooth_mask(mask, self.args.tester.data_consistency.hann_size)
             else:
