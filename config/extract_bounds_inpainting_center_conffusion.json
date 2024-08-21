@@ -49,9 +49,9 @@
                 },
                 "val_args":{ // arguments to initialize valid_dataloader, will overwrite the parameters in train_dataloader
                     "batch_size": 1, // batch size in each gpu
-                    "num_workers": 4,
+                    "num_workers": 1,
                     "shuffle": false,
-                    "pin_memory": true,
+                    "pin_memory": false,
                     "drop_last": false
                 }
             }
@@ -86,7 +86,7 @@
                 "args":{
                     "batch_size": 1,
                     "num_workers": 1,
-                    "pin_memory": true,
+                    "pin_memory": false,
                     "shuffle": false,
                     "drop_last": false
                 }
@@ -121,7 +121,7 @@
                 "args":{
                     "batch_size": 1,
                     "num_workers": 1,
-                    "pin_memory": true,
+                    "pin_memory": false,
                     "shuffle": false,
                     "drop_last": false
                 }
@@ -156,7 +156,7 @@
                 "args":{
                     "batch_size": 1,
                     "num_workers": 1,
-                    "pin_memory": true,
+                    "pin_memory": false,
                     "shuffle": false,
                     "drop_last": false
                 }
