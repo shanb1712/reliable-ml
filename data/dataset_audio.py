@@ -24,6 +24,10 @@ def make_dataset(dir):
                 if is_audio_file(fname):
                     path = os.path.join(root, fname)
                     audios.append(path)
+    dir_bounds = dir.replace('ground_truth', 'sampled_bounds')
+    sampled_bounds = list(os.walk(dir_bounds))[1][-1]
+    sampled_bounds = [sampled.rsplit('_long_sampled_upper')[0] for sampled in sampled_bounds]
+    audios = [s for s in audios if not any(xs in s for xs in sampled_bounds)]
 
     return audios
 
