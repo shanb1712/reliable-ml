@@ -37,7 +37,7 @@ num_accumulation_rounds: 1 #gradient accumulation, truncated backprop
 use_fp16: False #',          help='Enable mixed-precision training', metavar='BOOL',            type=bool, default=False, show_default=True)
 ls: 1 #',            help='Loss scaling', metavar='FLOAT',                              type=click.FloatRange(min=0, min_open=True), default=1, show_default=True)
 bench: True #',         help='Enable cuDNN benchmarking', metavar='BOOL',                  type=bool, default=True, show_default=True)
-num_workers: 4  #',       help='DataLoader worker processes', metavar='INT',                 type=click.IntRange(min=1), default=1, show_default=True)
+num_workers: 0  #',       help='DataLoader worker processes', metavar='INT',                 type=click.IntRange(min=1), default=1, show_default=True)
 
 # I/O-related. moved to logging
 seed: 42 #',          help='Random seed  [default: random]', metavar='INT',              type=int)
