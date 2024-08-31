@@ -13,7 +13,7 @@ def is_audio_file(filename):
     return any(filename.endswith(extension) for extension in AUD_EXTENSIONS)
 
 
-def make_dataset(dir):
+def make_dataset(dir, masked_length):
     if os.path.isfile(dir):
         audios = [i for i in np.genfromtxt(dir, dtype=np.str, encoding='utf-8')]
     else:
@@ -24,7 +24,7 @@ def make_dataset(dir):
                 if is_audio_file(fname):
                     path = os.path.join(root, fname)
                     audios.append(path)
-    dir_bounds = dir.replace('ground_truth', 'sampled_bounds')
+    dir_bounds = dir.replace('ground_truth', f'sampled_bounds/{masked_length}')
     sampled_bounds = list(os.walk(dir_bounds))[1][-1]
     sampled_bounds = [sampled.rsplit('_long_sampled_upper')[0] for sampled in sampled_bounds]
     audios = [s for s in audios if not any(xs in s for xs in sampled_bounds)]
@@ -46,19 +46,21 @@ class InpaintDataset(data.Dataset):
     def __init__(self, data_root, sample_rate, mask_config={}, load_len=0, data_len=-1, audio_len=-1,
                  loader=soundfile_loader,
                  sampled_bounds_path=None, skip_n_samples=-1):
-        self.audios = make_dataset(data_root)
-        self.data_len = data_len  # how many audio to load
-        self.load_len = load_len  # length of segment from the audio
-        if skip_n_samples > 0:
-            self.audios = self.audios[skip_n_samples:]
-        if self.data_len > 0:
-            self.audios = self.audios[:int(data_len)]
-
         self.loader = loader
         self.audio_len = audio_len  # Final length of audio after resampling
         self.sample_rate = sample_rate
         self.mask_config = mask_config
         self.mask_mode = self.mask_config['mask_mode']
+
+        self.data_len = data_len  # how many audio to load
+        self.load_len = load_len  # length of segment from the audio
+        self.masked_length = self.mask_config[self.mask_mode]['gap_length']
+        self.audios = make_dataset(data_root, self.masked_length)
+        if skip_n_samples > 0:
+            self.audios = self.audios[skip_n_samples:]
+        if self.data_len > 0:
+            self.audios = self.audios[:int(data_len)]
+
 
         self.load_dataset()
 

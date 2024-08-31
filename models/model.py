@@ -225,8 +225,10 @@ class Palette(BaseModel):
     def extract_bounds(self, n_soch_samples=200):
         self.netG.eval()
         self.test_metrics.reset()
-
-        bounds_path = f'{self.opt["datasets"][self.opt["phase"]]["which_dataset"]["args"]["sampled_bounds_path"]}'
+        masked_length = self.opt["datasets"][self.opt["phase"]]["which_dataset"]["args"]["mask_config"][
+            self.opt["datasets"][self.opt["phase"]]["which_dataset"]["args"]["mask_config"]["mask_mode"]]["gap_length"]
+        bounds_path = f'{self.opt["datasets"][self.opt["phase"]]["which_dataset"]["args"]["sampled_bounds_path"]}/{masked_length}'
+        # [self.opt["datasets"][self.opt["phase"]]["which_dataset"]["args"]["mask_config"]["mask_mode"]]["gap_length"]}'
         masking_type = f'{self.opt["datasets"][self.opt["phase"]]["which_dataset"]["args"]["mask_config"]["mask_mode"]}'
         os.makedirs(bounds_path, exist_ok=True)
 
