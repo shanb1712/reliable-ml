@@ -3,6 +3,7 @@ import hydra
 import pandas as pd
 import shutil
 import os
+os.chdir(os.path.dirname(os.path.realpath(__file__)))
 import warnings
 warnings.filterwarnings('ignore', 'Grad strides do not match bucket view strides') # False warning printed by PyTorch 1.12.
 
