@@ -167,87 +167,99 @@ class BoundsInpaintDataset(data.Dataset):
 
 
 class UncroppingDataset(data.Dataset):
-    def __init__(self, data_root, mask_config={}, data_len=-1, image_size=[256, 256], loader=pil_loader):
-        imgs = make_dataset(data_root)
+    def __init__(self, data_root, sample_rate, mask_config={}, data_len=-1, audio_len=-1, loader=soundfile_loader):
+        audios = make_dataset(data_root)
         if data_len > 0:
-            self.imgs = imgs[:int(data_len)]
+            self.audios = audios[:int(data_len)]
         else:
-            self.imgs = imgs
-        self.tfs = transforms.Compose([
-                transforms.Resize((image_size[0], image_size[1])),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5,0.5, 0.5])
-        ])
+            self.audios = audios
         self.loader = loader
+        self.audio_len = audio_len
+        self.sample_rate = sample_rate
         self.mask_config = mask_config
         self.mask_mode = self.mask_config['mask_mode']
-        self.image_size = image_size
 
     def __getitem__(self, index):
         ret = {}
-        path = self.imgs[index]
+        path = self.audios[index]
         img = self.tfs(self.loader(path))
         mask = self.get_mask()
-        cond_image = img*(1. - mask) + mask*torch.randn_like(img)
-        mask_img = img*(1. - mask) + mask
+        cond_audio = audio * mask + mask * torch.randn_like(audio)
+        mask_audio = audio * mask
 
-        ret['gt_image'] = img
-        ret['cond_image'] = cond_image
-        ret['mask_image'] = mask_img
+        ret['gt_image'] = audio
+        ret['cond_image'] = cond_audio
+        ret['mask_image'] = mask_audio
         ret['mask'] = mask
         ret['path'] = path.rsplit("/")[-1].rsplit("\\")[-1]
         return ret
 
     def __len__(self):
-        return len(self.imgs)
+        return len(self.audios)
 
     def get_mask(self):
-        if self.mask_mode == 'manual':
-            mask = bbox2mask(self.image_size, self.mask_config['shape'])
-        elif self.mask_mode == 'fourdirection' or self.mask_mode == 'onedirection':
-            mask = bbox2mask(self.image_size, random_cropping_bbox(mask_mode=self.mask_mode))
-        elif self.mask_mode == 'hybrid':
-            if np.random.randint(0,2)<1:
-                mask = bbox2mask(self.image_size, random_cropping_bbox(mask_mode='onedirection'))
+        mask = torch.ones((1, self.audio_len))  # assume between 5 and 6s of total length
+        if self.mask_mode == 'long':
+            gap = int(self.mask_config[self.mask_mode]['gap_length'] * self.sample_rate / 1000)
+            if self.mask_config[self.mask_mode]['start_gap_idx'] == "none":
+                start_gap_index = int(self.audio_len // 2 - gap // 2)
             else:
-                mask = bbox2mask(self.image_size, random_cropping_bbox(mask_mode='fourdirection'))
+                start_gap_index = int(self.mask_config[self.mask_mode]['start_gap_idx'] * self.sample_rate / 1000)
+            mask[..., start_gap_index:(start_gap_index + gap)] = 0
+        elif self.mask_mode == 'short':
+            num_gaps = int(self.mask_config[self.mask_mode]['num_gaps'])
+            gap_len = int(self.mask_config[self.mask_mode]['gap_length'] * self.sample_rate / 1000)
+            if self.mask_config[self.mask_mode]['start_gap_idx'] == "none":
+                start_gap_index = torch.randint(0, self.audio_len - gap_len, (num_gaps,))
+                for i in range(num_gaps):
+                    mask[..., start_gap_index[i]:(start_gap_index[i] + gap_len)] = 0
+            else:
+                start_gap_index = int(self.mask_config[self.mask_mode]['start_gap_idx'] * self.sample_rate / 1000)
+            mask[..., start_gap_index:(start_gap_index + gap)] = 0
         elif self.mask_mode == 'file':
             pass
         else:
             raise NotImplementedError(
                 f'Mask mode {self.mask_mode} has not been implemented.')
-        return torch.from_numpy(mask).permute(2,0,1)
+        return mask
 
 
 class ColorizationDataset(data.Dataset):
-    def __init__(self, data_root, data_flist, data_len=-1, image_size=[224, 224], loader=pil_loader):
+    def __init__(self, data_root, sample_rate, data_flist, data_len=-1, audio_len=-1, loader=soundfile_loader):
         self.data_root = data_root
         flist = make_dataset(data_flist)
         if data_len > 0:
             self.flist = flist[:int(data_len)]
         else:
             self.flist = flist
-        self.tfs = transforms.Compose([
-                transforms.Resize((image_size[0], image_size[1])),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5,0.5, 0.5])
-        ])
+        # self.tfs = transforms.Compose([
+        #         transforms.Resize((image_size[0], image_size[1])),
+        #         transforms.ToTensor(),
+        #         transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5,0.5, 0.5])
+        # ])
         self.loader = loader
-        self.image_size = image_size
+        self.audio_len = audio_len
+        self.sample_rate = sample_rate
 
     def __getitem__(self, index):
         ret = {}
-        file_name = str(self.flist[index]).zfill(5) + '.png'
+        file_name = str(self.flist[index]).zfill(5) + '.wav'
 
-        img = self.tfs(self.loader('{}/{}/{}'.format(self.data_root, 'color', file_name)))
-        cond_image = self.tfs(self.loader('{}/{}/{}'.format(self.data_root, 'gray', file_name)))
+        audio = self.tfs(self.loader(self.data_root))
+        cond_image = self.tfs(self.loader(self.data_root))
 
-        ret['gt_image'] = img
+        ret['gt_image'] = audio
         ret['cond_image'] = cond_image
         ret['path'] = file_name
         return ret
 
     def __len__(self):
         return len(self.flist)
+
+    def tfs(self, audio):
+        # Stereo to mono
+        if len(audio) > 1:
+            audio = np.mean(audio, axis=1)
+            return audio
 
 
