@@ -171,16 +171,21 @@ def main_worker(gpu, opt):
     # endregion
 
     # region INIT DATASETS
+    print('Loading calibration dataloader...')
     phase_loader, val_loader = define_dataloader(phase_logger, opt) # val_loader is None if phase is test.
     for phase, dataset_opt in opt['datasets'].items():
         data_sampler = None
         worker_init_fn = partial(Util.set_seed, gl_seed=opt['seed'])
         dataloader_args = dataset_opt['dataloader']['args']
         if phase == 'validation':
-            val_set = init_obj(dataset_opt['which_dataset'], phase_logger, default_file_name='data.dataset', init_type='Dataset')
+            print('Loading validation dataloader...')
+            val_set = init_obj(dataset_opt['which_dataset'], phase_logger,
+                               default_file_name=dataset_opt['dataloader']['default_file_name'], init_type='Dataset')
             val_loader = DataLoader(val_set, sampler=data_sampler, worker_init_fn=worker_init_fn, **dataloader_args)
         elif phase == 'test':
-            test_set = init_obj(dataset_opt['which_dataset'], phase_logger, default_file_name='data.dataset', init_type='Dataset')
+            print('Loading test dataloader...')
+            test_set = init_obj(dataset_opt['which_dataset'], phase_logger,
+                                default_file_name=dataset_opt['dataloader']['default_file_name'], init_type='Dataset')
             test_loader = DataLoader(test_set, sampler=data_sampler, worker_init_fn=worker_init_fn, **dataloader_args)
     # endregion
 
