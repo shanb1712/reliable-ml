@@ -22,7 +22,7 @@ def is_audio_file(filename):
     return any(filename.endswith(extension) for extension in AUD_EXTENSIONS)
 
 
-def make_dataset(dir, masked_length):
+def make_dataset(dir):
     if os.path.isfile(dir):
         audios = [i for i in np.genfromtxt(dir, dtype=np.str, encoding='utf-8')]
     else:
@@ -33,12 +33,8 @@ def make_dataset(dir, masked_length):
                 if is_audio_file(fname):
                     path = os.path.join(root, fname)
                     audios.append(path)
-    dir_bounds = dir.replace('ground_truth', f'sampled_bounds/{masked_length}')
-    sampled_bounds = list(os.walk(dir_bounds))[1][-1]
-    sampled_bounds = [sampled.rsplit('_long_sampled_upper')[0] for sampled in sampled_bounds]
-    audios = [s for s in audios if not any(xs in s for xs in sampled_bounds)]
-
     return audios
+
 
 def soundfile_loader(f):
     segnp, fs = sf.read(f)
@@ -64,11 +60,11 @@ class BoundsInpaintDataset(data.Dataset):
         self.load_len = load_len  # length of segment from the audio
         self.masked_length = self.mask_config[self.mask_mode]['gap_length']
 
-        self.audios = make_dataset(data_root, self.masked_length)
-        lower_bounds = make_dataset(f"{sampled_bounds_path}/lower_bounds/", masked_length=self.masked_length)
-        upper_bounds = make_dataset(f"{sampled_bounds_path}/upper_bounds/", masked_length=self.masked_length)
-        sampled_masks = make_dataset(f"{sampled_bounds_path}/masks/", masked_length=self.masked_length)
-        masked_samples = make_dataset(f"{sampled_bounds_path}/masked_samples/", masked_length=self.masked_length)
+        self.audios = make_dataset(data_root)
+        lower_bounds = make_dataset(f"{sampled_bounds_path}/{self.masked_length}/lower_bounds")
+        upper_bounds = make_dataset(f"{sampled_bounds_path}/{self.masked_length}/upper_bounds")
+        sampled_masks = make_dataset(f"{sampled_bounds_path}/{self.masked_length}/masks")
+        masked_samples = make_dataset(f"{sampled_bounds_path}/{self.masked_length}/masked_samples")
 
         if self.data_len > 0:
             self.audios = self.audios[:int(data_len)]
@@ -105,7 +101,6 @@ class BoundsInpaintDataset(data.Dataset):
         ret['upper_bound'] = upper_bound
         ret['masked_samples'] = masked_samples
         ret['sampled_masks'] = sampled_masks
-
 
         ret['gt_image'] = seg
         ret['cond_image'] = cond_audio
@@ -261,5 +256,3 @@ class ColorizationDataset(data.Dataset):
         if len(audio) > 1:
             audio = np.mean(audio, axis=1)
             return audio
-
-
