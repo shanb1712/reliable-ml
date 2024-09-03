@@ -10,7 +10,7 @@
         "tb_logger": "tb_logger", // path of tensorboard logger
         "results": "results",
         "checkpoint": "checkpoint",
-        "resume_state": "checkpoints/celeba_hq/200"
+        "resume_state": "checkpoints/maestro/maestro_22k_8s-750000"
     },
 
     "datasets": { // train or test
@@ -19,13 +19,26 @@
                 "name": ["data.dataset", "InpaintDataset"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
                 "args":{ // arguments to initialize dataset
                     "data_root": "datasets/celebahq/flist/train.flist",
+                    "sample_rate": 22050,
+                    "audio_len": 184184,
+                    "load_len": 405000,
                     "data_len": -1,
                     "mask_config": {
-                        "mask_mode": "hybrid"
+                        "mask_mode": "long",
+                        "long": {
+                            "gap_length": 250, // in ms
+                            "start_gap_idx": "none"  //in ms, None means at the middle
+                        },
+                        "short": {
+                            "num_gaps": 4,
+                            "gap_length": 3000,  // in ms
+                            "start_gap_idx": "none" // in ms, None means random. If not None this should be a list of length num_gaps
+                        }
                     }
                 } 
             },
             "dataloader":{
+                "default_file_name": "data.dataset_audio",
                 "validation_split": 2, // percent or number 
                 "args":{ // arguments to initialize train_dataloader
                     "batch_size": 3, // batch size in each gpu
