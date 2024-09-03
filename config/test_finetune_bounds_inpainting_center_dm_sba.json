@@ -49,16 +49,28 @@
             "which_dataset": {
                 "name":  ["data.bounds_finetune_dataset", "BoundsInpaintDataset"], // import Dataset() class / function(not recommend) from default file
                 "args":{
-                   "data_root": "../datasets/celebahq_256/calibration/ground_truth",
-                    "sampled_bounds_path": "../datasets/celebahq_256/calibration/sampled_bounds",
+                   "data_root": "dldata/maestro-v3.0.0/splits/calibration/ground_truth",
+                    "sampled_bounds_path": "dldata/maestro-v3.0.0/splits/calibration/sampled_bounds",
                     "data_len": -1,
-
+                    "sample_rate": 22050,
+                    "audio_len": 184184,
+                    "load_len": 405000,
                     "mask_config": {
-                        "mask_mode": "center"
+                        "mask_mode": "long",
+                        "long": {
+                            "gap_length": 100, // in ms
+                            "start_gap_idx": "none"  //in ms, None means at the middle
+                        },
+                        "short": {
+                            "num_gaps": 4,
+                            "gap_length": 3000,  // in ms
+                            "start_gap_idx": "none" // in ms, None means random. If not None this should be a list of length num_gaps
+                        }
                     }
                 }
             },
             "dataloader":{
+                "default_file_name": "data.dataset_audio",
                 "args":{
                     "batch_size": 4,
                     "num_workers": 8,
@@ -72,15 +84,28 @@
             "which_dataset": {
                 "name": ["data.bounds_finetune_dataset", "BoundsInpaintDataset"], // import Dataset() class / function(not recommend) from default file
                 "args":{
-                     "data_root": "../datasets/celebahq_256/validation/ground_truth",
-                    "sampled_bounds_path": "../datasets/celebahq_256/validation/sampled_bounds",
+                     "data_root": "dldata/maestro-v3.0.0/splits/validation/ground_truth",
+                    "sampled_bounds_path": "dldata/maestro-v3.0.0/splits/validation/sampled_bounds",
                     "data_len": -1,
+                    "sample_rate": 22050,
+                    "audio_len": 184184,
+                    "load_len": 405000,
                     "mask_config": {
-                        "mask_mode": "center"
+                       "mask_mode": "long",
+                        "long": {
+                            "gap_length": 100, // in ms
+                            "start_gap_idx": "none"  //in ms, None means at the middle
+                        },
+                        "short": {
+                            "num_gaps": 4,
+                            "gap_length": 3000,  // in ms
+                            "start_gap_idx": "none" // in ms, None means random. If not None this should be a list of length num_gaps
+                        }
                     }
                 }
             },
             "dataloader":{
+                "default_file_name": "data.dataset_audio",
                 "args":{
                     "batch_size": 4,
                     "num_workers": 8,
@@ -94,15 +119,28 @@
             "which_dataset": {
                 "name": ["data.bounds_finetune_dataset", "BoundsInpaintDataset"], // import Dataset() class / function(not recommend) from default file
                 "args":{
-                       "data_root": "../datasets/celebahq_256/test/ground_truth",
-                    "sampled_bounds_path": "../datasets/celebahq_256/test/sampled_bounds",
+                       "data_root": "dldata/maestro-v3.0.0/splits/test/ground_truth",
+                    "sampled_bounds_path": "dldata/maestro-v3.0.0/splits/test/sampled_bounds",
                     "data_len": -1,
+                    "sample_rate": 22050,
+                    "audio_len": 184184,
+                    "load_len": 405000,
                     "mask_config": {
-                        "mask_mode": "center"
+                        "mask_mode": "long",
+                        "long": {
+                            "gap_length": 100, // in ms
+                            "start_gap_idx": "none"  //in ms, None means at the middle
+                        },
+                        "short": {
+                            "num_gaps": 4,
+                            "gap_length": 3000,  // in ms
+                            "start_gap_idx": "none" // in ms, None means random. If not None this should be a list of length num_gaps
+                        }
                     }
                 }
             },
             "dataloader":{
+                "default_file_name": "data.dataset_audio",
                 "args":{
                     "batch_size": 4,
                     "num_workers": 8,
