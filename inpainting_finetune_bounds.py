@@ -215,10 +215,14 @@ def main_worker(gpu, opt):
         worker_init_fn = partial(Util.set_seed, gl_seed=opt['seed'])
         dataloader_args = dataset_opt['dataloader']['args']
         if phase == 'calibration' and args.phase != 'validation':
-            train_set = init_obj(dataset_opt['which_dataset'], phase_logger, default_file_name='data.dataset', init_type='Dataset')
+            print('Loading calibration dataloader...')
+            train_set = init_obj(dataset_opt['which_dataset'], phase_logger,
+                                 default_file_name=dataset_opt['dataloader']['default_file_name'], init_type='Dataset')
             train_loader = DataLoader(train_set, sampler=data_sampler, worker_init_fn=worker_init_fn, **dataloader_args)
         elif phase == 'validation':
-            val_set = init_obj(dataset_opt['which_dataset'], phase_logger, default_file_name='data.dataset', init_type='Dataset')
+            print('Loading validation dataloader...')
+            val_set = init_obj(dataset_opt['which_dataset'], phase_logger,
+                               default_file_name=dataset_opt['dataloader']['default_file_name'], init_type='Dataset')
             val_loader = DataLoader(val_set, sampler=data_sampler, worker_init_fn=worker_init_fn, **dataloader_args)
     # endregion
 
@@ -227,7 +231,9 @@ def main_worker(gpu, opt):
     metrics = [define_metric(phase_logger, item_opt) for item_opt in opt['model']['which_metrics']]
     losses = [define_loss(phase_logger, item_opt) for item_opt in opt['model']['which_losses']]
 
-    model = create_model(opt=opt, networks=networks, phase_loader=train_loader, val_loader=val_loader, losses=losses, metrics=metrics, logger=phase_logger, writer=phase_writer, wandb_logger=wandb_logger)
+    model = create_model(opt=opt, networks=networks, phase_loader=train_loader, val_loader=val_loader,
+                         losses=losses, metrics=metrics, logger=phase_logger, writer=phase_writer,
+                         wandb_logger=wandb_logger)
     model.netG.set_new_noise_schedule(phase=opt['phase'])
 
     diffusion_with_bounds = Conffusion(model, opt, device, load_finetuned=args.phase == "test").to(device)
@@ -241,7 +247,7 @@ def main_worker(gpu, opt):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config', type=str, default='config/finetune_bounds_inpainting_center_celebahq.json', help='JSON file for configuration')
+    parser.add_argument('-c', '--config', type=str, default='config/finetune_bounds_inpainting_center_dm_sba.json', help='JSON file for configuration')
     parser.add_argument('-p', '--phase', type=str, choices=['calibration', 'validation', 'test'], help='Run train or test', default='calibration')
     parser.add_argument('-b', '--batch', type=int, default=None, help='Batch size in every gpu')
     parser.add_argument('-gpu', '--gpu_ids', type=str, default=None)
