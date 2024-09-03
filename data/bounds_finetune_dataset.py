@@ -3,11 +3,12 @@ import os
 import numpy as np
 import torch
 import torch.utils.data as data
-from PIL import Image
 from torchvision import transforms
+import soundfile as sf
 
 from .util.mask import (bbox2mask, brush_stroke_mask, get_irregular_mask,
                         random_bbox, random_cropping_bbox)
+import utils.training_utils as t_utils
 
 IMG_EXTENSIONS = [
     '.jpg', '.JPG', '.jpeg', '.JPEG',
