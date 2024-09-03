@@ -166,7 +166,6 @@ class BoundsInpaintDataset(data.Dataset):
         return torch.from_numpy(mask)  # 1, L
 
 
-
 class UncroppingDataset(data.Dataset):
     def __init__(self, data_root, mask_config={}, data_len=-1, image_size=[256, 256], loader=pil_loader):
         imgs = make_dataset(data_root)
