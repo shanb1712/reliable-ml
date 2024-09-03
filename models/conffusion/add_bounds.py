@@ -6,7 +6,7 @@ import cv2
 import torch
 import torch.nn as nn
 
-from ..network import extract
+from ..audio_network import extract
 from .pinball import PinballLoss
 
 
