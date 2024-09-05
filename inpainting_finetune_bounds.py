@@ -1,10 +1,12 @@
 import argparse
 import os
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 from functools import partial
 os.environ['WANDB_DISABLED'] = 'true'
 import core.praser as Praser
 import core.util as Util
 import torch
+torch.cuda.empty_cache()
 from core import vis_util
 from core.calibration_masked import calibrate_model
 from core.eval_utils_masked import get_rcps_metrics
@@ -259,7 +261,7 @@ if __name__ == '__main__':
     parser.add_argument('--clip_denoised', action='store_true')
     parser.add_argument('--finetune_loss', type=str, choices=['l2', 'quantile_regression'], default='quantile_regression')
     parser.add_argument('--distributed_worker_id', type=int, default=None)
-    parser.add_argument('--prediction_time_step', type=int, default=155)
+    parser.add_argument('--prediction_time_step', type=int, default=35)
     parser.add_argument('--wandb_run_name', type=str, default=None)
     parser.add_argument('--lr', type=float, default=1e-5)
 
@@ -268,6 +270,7 @@ if __name__ == '__main__':
 
     gpu_str = ','.join(str(x) for x in opt['gpu_ids'])
     os.environ['CUDA_VISIBLE_DEVICES'] = gpu_str
+    print('export CUDA_VISIBLE_DEVICES={}'.format(gpu_str))
 
     opt['world_size'] = 1
     main_worker(0, opt)
