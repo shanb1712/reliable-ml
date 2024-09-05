@@ -78,6 +78,7 @@ class BoundsInpaintDataset(data.Dataset):
         upper_bounds = make_dataset_extracted_bounds(f"{sampled_bounds_path}/{self.masked_length}/upper_bounds")
         sampled_masks = make_dataset_extracted_bounds(f"{sampled_bounds_path}/{self.masked_length}/masks")
         masked_samples = make_dataset_extracted_bounds(f"{sampled_bounds_path}/{self.masked_length}/masked_samples")
+        gen_samples = make_dataset_extracted_bounds(f"{sampled_bounds_path}/{self.masked_length}/gen_samples")
 
         if self.data_len > 0:
             self.audios = self.audios[:int(data_len)]
@@ -85,12 +86,15 @@ class BoundsInpaintDataset(data.Dataset):
             self.upper_bounds = upper_bounds[:int(data_len)]
             self.sampled_masks = sampled_masks[:int(data_len)]
             self.masked_samples = masked_samples[:int(data_len)]
+            self.gen_samples = gen_samples[:int(data_len)]
+
         else:
-            self.audios = self.audios[:int(data_len)]
+            self.audios = self.audios
             self.lower_bounds = lower_bounds
             self.upper_bounds = upper_bounds
             self.sampled_masks = sampled_masks
             self.masked_samples = masked_samples
+            self.gen_samples = gen_samples
 
         self.load_dataset()
 
@@ -100,25 +104,25 @@ class BoundsInpaintDataset(data.Dataset):
         mask = self.get_mask()
 
         seg = resample_audio(original, torch.from_numpy(np.array(self.f_s[index])), self.sample_rate, self.audio_len)
-        mask_audio = seg * mask
+        mask_audio = seg * mask #  TODO Should be the initial generated audio
 
-        cond_audio = seg * mask + mask * torch.randn_like(seg)
+        cond_audio = seg * mask + mask * torch.randn_like(seg) #  TODO Should be the initial generated audio
 
         lower_bound = torch.load(self.lower_bounds[index])
         upper_bound = torch.load(self.upper_bounds[index])
 
-        masked_samples = torch.load(self.masked_samples[index]).squeeze(dim=0)
-        sampled_masks = torch.load(self.sampled_masks[index]).squeeze(dim=1)
+        masked_samples = torch.load(self.masked_samples[index]).squeeze(dim=0) #  TODO Should be the initial generated audio
+        sampled_masks = torch.load(self.sampled_masks[index]).squeeze(dim=1) #  TODO Should be the initial generated audio
 
         ret['lower_bound'] = lower_bound
         ret['upper_bound'] = upper_bound
-        ret['masked_samples'] = masked_samples
-        ret['sampled_masks'] = sampled_masks
+        ret['masked_samples'] = masked_samples.type(torch.float32)
+        ret['sampled_masks'] = sampled_masks.type(torch.float32)
 
-        ret['gt_image'] = seg
-        ret['cond_image'] = cond_audio
-        ret['mask_image'] = mask_audio
-        ret['mask'] = mask
+        ret['gt_image'] = seg.type(torch.float32)
+        ret['cond_image'] = cond_audio.type(torch.float32)
+        ret['mask_image'] = mask_audio.type(torch.float32)
+        ret['mask'] = mask.type(torch.float32)
         ret['path'] = self.audios[index].rsplit("/")[-1].rsplit("\\")[-1]
 
         return ret
@@ -190,7 +194,7 @@ class UncroppingDataset(data.Dataset):
     def __getitem__(self, index):
         ret = {}
         path = self.audios[index]
-        img = self.tfs(self.loader(path))
+        audio = self.tfs(self.loader(path))
         mask = self.get_mask()
         cond_audio = audio * mask + mask * torch.randn_like(audio)
         mask_audio = audio * mask
