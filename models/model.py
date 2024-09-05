@@ -281,6 +281,7 @@ class Palette(BaseModel):
                 os.makedirs(f'{bounds_path}/lower_bounds/', exist_ok=True)
                 os.makedirs(f'{bounds_path}/masked_samples/', exist_ok=True)
                 os.makedirs(f'{bounds_path}/masks/', exist_ok=True)
+                os.makedirs(f'{bounds_path}/gen_samples/', exist_ok=True)
 
                 torch.save(calibration_upper_bounds,
                            f'{bounds_path}/upper_bounds/{sample_file_name}_{masking_type}_sampled_upper_bounds{filename_suffix}.pt')
@@ -290,6 +291,8 @@ class Palette(BaseModel):
                            f'{bounds_path}/masked_samples/{sample_file_name}_{masking_type}_masked_samples{filename_suffix}.pt')
                 torch.save(samples_masks,
                            f'{bounds_path}/masks/{sample_file_name}_{masking_type}_masks{filename_suffix}.pt')
+                torch.save(self.gen_image,
+                           f'{bounds_path}/gen_samples/{sample_file_name}_{masking_type}_gen_samples{filename_suffix}.pt')
 
     def load_networks(self):
         """ save pretrained model and training state, which only do on GPU 0. """
