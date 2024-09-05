@@ -30,11 +30,15 @@ class Conffusion(nn.Module):
 
 
     def forward(self, masked_images):
+        masked_images = masked_images.squeeze(dim=1)
+        # masked_images_conc = torch.cat([masked_images.squeeze(dim=1), masked_images.squeeze(dim=1)], dim=0)
         batch_size = masked_images.shape[0]
 
         t = torch.full((batch_size,), self.prediction_time_step, device=masked_images.device, dtype=torch.long)
+        # t = self.baseModel.diff_params.create_schedule(self.baseModel.args.tester.T).to(masked_images.device).long()
         noise_level = extract(self.baseModel.gammas, t, x_shape=(1, 1)).to(masked_images.device)
-        predicted_l, predicted_u  = self.baseModel.denoise_fn(torch.cat([masked_images, masked_images], dim=1), noise_level, out_upper_lower=True)
+        # predicted_l, predicted_u  = self.baseModel.denoise_fn(masked_images, noise_level, out_upper_lower=True)
+        error, sigma = self.baseModel.diff_params.loss_fn(self.baseModel.denoise_fn, masked_images)
 
         predicted_l = self.baseModel.predict_start_from_noise(masked_images, t, predicted_l)
         predicted_u = self.baseModel.predict_start_from_noise(masked_images, t, predicted_u)
