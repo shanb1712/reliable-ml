@@ -720,14 +720,12 @@ class Unet_CQT_oct_with_attention(nn.Module):
                                         ResnetBlock(dim_in, dim_out, use_norm=self.use_norm,num_dils= self.num_dils[i],attention_dict=attn_dict, bias=False, emb_dim=self.emb_dim, init=init, init_zero=init_zero, Fdim=(i+1)*self.bins_per_oct),
                                         ]))
 
-
-
         #self.cropconcat = CropConcatBlock()
 
 
 
 
-    def forward(self, inputs, sigma):
+    def forward(self, inputs, sigma, out_upper_lower=False):
         """
         Args: 
             inputs (Tensor):  Input signal in time-domsin, shape (B,T)
@@ -838,11 +836,24 @@ class Unet_CQT_oct_with_attention(nn.Module):
                 X=self.upsamplerT(X) #call contiguous() here?
                 Xout=self.upsamplerT(Xout) #call contiguous() here?
 
-        pred_time=self.CQTransform.bwd(X_list_out)
-        pred_time=pred_time.squeeze(1)
-        pred_time=pred_time[:,0:inputs.shape[-1]]
-        assert pred_time.shape==inputs.shape, "bad shapes"
-        return pred_time
+        if out_upper_lower:
+            # Predict lower bound
+            pred_time_lower = self.CQTransform.bwd(X_list_out)
+            pred_time_lower = pred_time_lower.squeeze(1)
+            pred_time_lower = pred_time_lower[:, 0:inputs.shape[-1]]
+
+            # Predict upper bound
+            pred_time_upper = self.CQTransform.bwd(X_list_out)
+            pred_time_upper = pred_time_upper.squeeze(1)
+            pred_time_upper = pred_time_upper[:, 0:inputs.shape[-1]]
+            assert (pred_time_lower.shape == inputs.shape) and (pred_time_upper.shape == inputs.shape), "bad shapes"
+            return pred_time_lower, pred_time_upper
+        else:
+            pred_time = self.CQTransform.bwd(X_list_out)
+            pred_time = pred_time.squeeze(1)
+            pred_time = pred_time[:, 0:inputs.shape[-1]]
+            assert pred_time.shape == inputs.shape, "bad shapes"
+            return pred_time
 
             
 
