@@ -30,18 +30,22 @@ class Conffusion(nn.Module):
 
 
     def forward(self, masked_images):
-        masked_images = masked_images.squeeze(dim=1)
-        # masked_images_conc = torch.cat([masked_images.squeeze(dim=1), masked_images.squeeze(dim=1)], dim=0)
-        batch_size = masked_images.shape[0]
+        device=masked_images.device
+        timestamp=2
+        # TODO: I don;t think this is the desired output. We should further validate it
+        t = self.baseModel.diff_params.create_schedule(self.baseModel.num_timesteps).to(device)
+        sigma=t[timestamp].unsqueeze(-1).to(device)
 
-        t = torch.full((batch_size,), self.prediction_time_step, device=masked_images.device, dtype=torch.long)
-        # t = self.baseModel.diff_params.create_schedule(self.baseModel.args.tester.T).to(masked_images.device).long()
-        noise_level = extract(self.baseModel.gammas, t, x_shape=(1, 1)).to(masked_images.device)
-        # predicted_l, predicted_u  = self.baseModel.denoise_fn(masked_images, noise_level, out_upper_lower=True)
-        error, sigma = self.baseModel.diff_params.loss_fn(self.baseModel.denoise_fn, masked_images)
+        noise=self.baseModel.diff_params.sample_prior(masked_images.shape,sigma)
+        x = masked_images +noise
 
-        predicted_l = self.baseModel.predict_start_from_noise(masked_images, t, predicted_l)
-        predicted_u = self.baseModel.predict_start_from_noise(masked_images, t, predicted_u)
+        # t = torch.full((batch_size,), 25, device=masked_images.device, dtype=torch.long)
+        predicted_l, predicted_u = self.baseModel.diff_params.denoiser(x, self.baseModel.denoise_fn, t.unsqueeze(-1),
+                                                    out_upper_lower=True)
+        if self.baseModel.args.tester.filter_out_cqt_DC_Nyq:
+            predicted_l = self.baseModel.denoise_fn.CQTransform.CQTransform.apply_hpf_DC(predicted_l)
+
+            predicted_u = self.baseModel.denoise_fn.CQTransform.CQTransform.apply_hpf_DC(predicted_u)
 
         predicted_l.clamp_(-1., 1.)
         predicted_u.clamp_(-1., 1.)
