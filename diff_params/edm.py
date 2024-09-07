@@ -130,7 +130,7 @@ class EDM():
     def lambda_w(self,sigma):
         return (sigma*self.sigma_data)**(-2) * (self.sigma_data**2+sigma**2)
         
-    def denoiser(self, xn , net, sigma):
+    def denoiser(self, xn , net, sigma, out_upper_lower=False):
         """
         This method does the whole denoising step, which implies applying the model and the preconditioning
         Args:
@@ -144,8 +144,11 @@ class EDM():
         cout=self.cout(sigma)
         cin=self.cin(sigma)
         cnoise=self.cnoise(sigma)
-
-        return cskip * xn +cout*net(cin*xn, cnoise)  #this will crash because of broadcasting problems, debug later!
+        if out_upper_lower:
+            denoised_l, denoised_u = net(cin*xn, cnoise, out_upper_lower)
+            return cskip * xn +cout*denoised_l, cskip * xn +cout*denoised_u
+        else:
+            return cskip * xn +cout*net(cin*xn, cnoise, out_upper_lower)  #this will crash because of broadcasting problems, debug later!
 
     def prepare_train_preconditioning(self, x, sigma):
         #weight=self.lambda_w(sigma)
