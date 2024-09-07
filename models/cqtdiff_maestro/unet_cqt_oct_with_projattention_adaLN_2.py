@@ -837,13 +837,14 @@ class Unet_CQT_oct_with_attention(nn.Module):
                 Xout=self.upsamplerT(Xout) #call contiguous() here?
 
         if out_upper_lower:
+            X_list_out_upper = X_list_out.copy()
             # Predict lower bound
             pred_time_lower = self.CQTransform.bwd(X_list_out)
             pred_time_lower = pred_time_lower.squeeze(1)
             pred_time_lower = pred_time_lower[:, 0:inputs.shape[-1]]
 
             # Predict upper bound
-            pred_time_upper = self.CQTransform.bwd(X_list_out)
+            pred_time_upper = self.CQTransform.bwd(X_list_out_upper)
             pred_time_upper = pred_time_upper.squeeze(1)
             pred_time_upper = pred_time_upper[:, 0:inputs.shape[-1]]
             assert (pred_time_lower.shape == inputs.shape) and (pred_time_upper.shape == inputs.shape), "bad shapes"
