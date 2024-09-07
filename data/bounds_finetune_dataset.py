@@ -102,11 +102,13 @@ class BoundsInpaintDataset(data.Dataset):
         ret = {}
         original = torch.from_numpy(self.test_samples[index])[None, :]
         mask = self.get_mask()
+        generated = torch.load(self.gen_samples[index])
 
         seg = resample_audio(original, torch.from_numpy(np.array(self.f_s[index])), self.sample_rate, self.audio_len)
-        mask_audio = seg * mask #  TODO Should be the initial generated audio
+        mask_audio = generated # seg * mask
 
-        cond_audio = seg * mask + mask * torch.randn_like(seg) #  TODO Should be the initial generated audio
+        cond_audio = original.detach().cpu() * mask
+                     # + mask * torch.randn_like(seg)  # TODO Should be the initial generated audio
 
         lower_bound = torch.load(self.lower_bounds[index])
         upper_bound = torch.load(self.upper_bounds[index])
@@ -116,12 +118,12 @@ class BoundsInpaintDataset(data.Dataset):
 
         ret['lower_bound'] = lower_bound
         ret['upper_bound'] = upper_bound
-        ret['masked_samples'] = masked_samples.type(torch.float32)
+        ret['masked_samples'] = generated.detach().cpu().type(torch.float32)
         ret['sampled_masks'] = sampled_masks.type(torch.float32)
 
         ret['gt_image'] = seg.type(torch.float32)
         ret['cond_image'] = cond_audio.type(torch.float32)
-        ret['mask_image'] = mask_audio.type(torch.float32)
+        ret['mask_image'] = mask_audio.detach().cpu().type(torch.float32)
         ret['mask'] = mask.type(torch.float32)
         ret['path'] = self.audios[index].rsplit("/")[-1].rsplit("\\")[-1]
 
