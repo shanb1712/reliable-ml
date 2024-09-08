@@ -82,7 +82,7 @@ if __name__ == "__main__":
     parser.add_argument('-gpu', '--gpu_ids', type=str, default='1')
     parser.add_argument('-d', '--debug', action='store_true')
     parser.add_argument('-P', '--port', default='21012', type=str)
-    parser.add_argument('--n_soch_samples', type=int, default=200)
+    parser.add_argument('--n_soch_samples', type=int, default=50)
     parser.add_argument('--enable_wandb', action='store_true')
     parser.add_argument('--finetune_loss', type=str, default=None)
     parser.add_argument('--distributed_worker_id', type=int, required=True)
