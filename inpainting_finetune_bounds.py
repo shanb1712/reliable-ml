@@ -26,14 +26,14 @@ def run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, v
         val_batch_size = val_loader.batch_size
         dataset_len = len(val_loader.dataset)
 
-        sr_res = 256
-        n_img_channels = 3
-        all_val_pred_lower_bounds = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res, sr_res), device=device)
-        all_val_pred_upper_bounds = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res, sr_res), device=device)
-        all_val_gt_samples = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res, sr_res), device=device)
-        all_val_maskes = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res, sr_res), device=device)
-        all_val_partial_gt_images = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res, sr_res))
-        all_val_masked_samples = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res, sr_res))
+        sr_res = 184184
+        n_img_channels = 1
+        all_val_pred_lower_bounds = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res), device=device)
+        all_val_pred_upper_bounds = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res), device=device)
+        all_val_gt_samples = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res), device=device)
+        all_val_maskes = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res), device=device)
+        all_val_partial_gt_images = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res))
+        all_val_masked_samples = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res))
         # endregion
 
         for val_idx, val_data in enumerate(val_loader):
@@ -85,8 +85,8 @@ def run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, v
 
 
         # region CALIBRATION
-        pred_val_lambda_hat, pred_val_calibrated_l, pred_val_calibrated_u = calibrate_model(all_val_pred_lower_bounds, all_val_pred_upper_bounds, all_val_gt_samples, all_val_maskes)
-        calibrated_pred_risks_losses, calibrated_pred_sizes_mean, calibrated_pred_sizes_median, calibrated_pred_stratified_risks = get_rcps_metrics(pred_val_calibrated_l, pred_val_calibrated_u, all_val_gt_samples, all_val_maskes)
+        pred_val_lambda_hat, pred_val_calibrated_l, pred_val_calibrated_u = calibrate_model(all_val_pred_lower_bounds, all_val_pred_upper_bounds, all_val_gt_samples, all_val_maskes[:,0])
+        calibrated_pred_risks_losses, calibrated_pred_sizes_mean, calibrated_pred_sizes_median, calibrated_pred_stratified_risks = get_rcps_metrics(pred_val_calibrated_l, pred_val_calibrated_u, all_val_gt_samples, all_val_maskes[:,0])
 
         # endregion
 
@@ -97,7 +97,7 @@ def run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, v
                                            all_val_partial_gt_images.detach().cpu() * 2 - 1,
                                            all_val_masked_samples.detach().cpu() * 2 - 1,
                                            all_val_gt_samples.detach().cpu() * 2 - 1)
-            wandb_logger.log_image("Validation/Images", image_grid, caption="Pred L, Pred U, GT, Masked Input, Full GT", commit=False)
+            # wandb_logger.log_image("Validation/Images", image_grid, caption="Pred L, Pred U, GT, Masked Input, Full GT", commit=False)
 
             wandb_logger.log_metrics({'Validation/Calibrated Pred Risk': calibrated_pred_risks_losses, 'Validation/val_step': val_step}, commit=False)
             wandb_logger.log_metrics({'Validation/Calibrated Pred Size Mean': calibrated_pred_sizes_mean, 'Validation/val_step': val_step}, commit=False)
@@ -135,11 +135,13 @@ def run_training(opt, diffusion_with_bounds, wandb_logger, device, optimizer, tr
                 break
 
             if opt['train']['finetune_loss'] == 'quantile_regression':
-                masked_image = train_data["cond_image"].to(device)
-                mask = train_data["mask"].to(device)
+                # masked_image = train_data["cond_image"].to(device)
+                # mask = train_data["mask"].to(device)
+                masked_image = train_data["masked_samples"].to(device) # the generated signal 
+                mask = train_data["sampled_masks"].to(device) #mask to smaple the signal
             else:
-                masked_image = train_data["masked_samples"].to(device)
-                mask = train_data["sampled_masks"].to(device)
+                masked_image = train_data["masked_samples"].to(device) # the generated signal 
+                mask = train_data["sampled_masks"].to(device) #mask to smaple the signal
 
             gt_image = train_data["gt_image"].to(device)
 
