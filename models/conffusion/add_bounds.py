@@ -33,19 +33,19 @@ class Conffusion(nn.Module):
         device=masked_images.device
         timestamp=2
         # TODO: I don;t think this is the desired output. We should further validate it
-        t = self.baseModel.diff_params.create_schedule(self.baseModel.num_timesteps).to(device)
-        sigma=t[timestamp].unsqueeze(-1).to(device)
+        t = self.baseModel.diff_params.create_schedule(self.baseModel.num_timesteps).to(device) # shape 37
+        sigma=t[timestamp].unsqueeze(-1).to(device)# shape 1
 
-        noise=self.baseModel.diff_params.sample_prior(masked_images.shape,sigma)
-        x = masked_images +noise
+        noise=self.baseModel.diff_params.sample_prior(masked_images.shape,sigma)  # 1 1 184184
+        x = (masked_images +noise)[0] # 1 1 184184
 
         # t = torch.full((batch_size,), 25, device=masked_images.device, dtype=torch.long)
-        predicted_l, predicted_u = self.baseModel.diff_params.denoiser(x, self.baseModel.denoise_fn, t.unsqueeze(-1),
+        predicted_l, predicted_u = self.baseModel.diff_params.denoiser(x, self.baseModel.denoise_fn, sigma.unsqueeze(-1),
                                                     out_upper_lower=True)
         if self.baseModel.args.tester.filter_out_cqt_DC_Nyq:
-            predicted_l = self.baseModel.denoise_fn.CQTransform.CQTransform.apply_hpf_DC(predicted_l)
+            predicted_l = self.baseModel.denoise_fn.CQTransform.apply_hpf_DC(predicted_l)
 
-            predicted_u = self.baseModel.denoise_fn.CQTransform.CQTransform.apply_hpf_DC(predicted_u)
+            predicted_u = self.baseModel.denoise_fn.CQTransform.apply_hpf_DC(predicted_u)
 
         predicted_l.clamp_(-1., 1.)
         predicted_u.clamp_(-1., 1.)
