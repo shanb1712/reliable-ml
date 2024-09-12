@@ -1,5 +1,5 @@
 import numpy as np
-import util as Util
+import core.util as Util
 
 
 def create_image_grid(pred_l, pred_u, partial_gt, masked_input, gt_sample, n_rows=5):
@@ -21,7 +21,7 @@ def create_image_row(pred_l, pred_u, partial_gt, masked_input, gt_sample):
     masked_sample_img = Util.tensor2img(masked_input)
     gt_sample_img = Util.tensor2img(gt_sample)
     partial_gt_img = Util.tensor2img(partial_gt)
-    image_row = np.concatenate((pred_lower_bound_img, pred_upper_bound_img, partial_gt_img, masked_sample_img, gt_sample_img), axis=1)
+    image_row = np.concatenate((pred_lower_bound_img, pred_upper_bound_img, partial_gt_img, masked_sample_img, gt_sample_img), axis=-1)
     return image_row
 
 def log_train(diffusion_with_bounds, wandb_logger, pred_l, pred_u, partial_gt, train_data):
@@ -30,5 +30,5 @@ def log_train(diffusion_with_bounds, wandb_logger, pred_l, pred_u, partial_gt, t
                                     masked_input=train_data['cond_image'][0], gt_sample=train_data['gt_image'][0])
 
     if wandb_logger:
-        wandb_logger.log_image("Finetune/Images", image_to_log, caption="Pred L, Pred U, GT, Masked Input, Full GT", commit=False)
+        # wandb_logger.log_image("Finetune/Images", image_to_log, caption="Pred L, Pred U, GT, Masked Input, Full GT", commit=False)
         wandb_logger.log_metrics(logs)
