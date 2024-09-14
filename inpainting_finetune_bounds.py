@@ -135,10 +135,10 @@ def run_training(opt, diffusion_with_bounds, wandb_logger, device, optimizer, tr
                 break
 
             if opt['train']['finetune_loss'] == 'quantile_regression':
-                # masked_image = train_data["cond_image"].to(device)
-                # mask = train_data["mask"].to(device)
-                masked_image = train_data["masked_samples"].to(device) # the generated signal 
-                mask = train_data["sampled_masks"].to(device) #mask to smaple the signal
+                masked_image = train_data["cond_image"].to(device)
+                mask = train_data["mask"].to(device)
+                # masked_image = train_data["masked_samples"].to(device) # the generated signal 
+                # mask = train_data["sampled_masks"].to(device) #mask to smaple the signal
             else:
                 masked_image = train_data["masked_samples"].to(device) # the generated signal 
                 mask = train_data["sampled_masks"].to(device) #mask to smaple the signal

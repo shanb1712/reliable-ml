@@ -10,7 +10,7 @@
         "tb_logger": "tb_logger", // path of tensorboard logger
         "results": "results",
         "checkpoint": "checkpoint",
-        "resume_state": "checkpoints/"
+        "resume_state": "checkpoints/maestro/maestro_22k_8s-750000"
     },
 
     "datasets": { // train or test
@@ -19,24 +19,37 @@
                 "name": ["data.dataset", "InpaintDataset"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
                 "args":{ // arguments to initialize dataset
                     "data_root": "datasets/celebahq/flist/train.flist",
+                    "sample_rate": 22050,
+                    "audio_len": 184184,
+                    "load_len": 405000,
                     "data_len": -1,
                     "mask_config": {
-                        "mask_mode": "hybrid"
+                        "mask_mode": "long",
+                        "long": {
+                            "gap_length": 500, // in ms
+                            "start_gap_idx": "none"  //in ms, None means at the middle
+                        },
+                        "short": {
+                            "num_gaps": 4,
+                            "gap_length": 500,  // in ms
+                            "start_gap_idx": "none" // in ms, None means random. If not None this should be a list of length num_gaps
+                        }
                     }
-                } 
+                }
             },
             "dataloader":{
-                "validation_split": 2, // percent or number 
+                "default_file_name": "data.dataset_audio",
+                "validation_split": 2, // percent or number
                 "args":{ // arguments to initialize train_dataloader
-                    "batch_size": 3, // batch size in each gpu
-                    "num_workers": 4,
+                    "batch_size": 1, // batch size in each gpu
+                    "num_workers": 0,
                     "shuffle": true,
                     "pin_memory": true,
                     "drop_last": true
                 },
                 "val_args":{ // arguments to initialize valid_dataloader, will overwrite the parameters in train_dataloader
                     "batch_size": 1, // batch size in each gpu
-                    "num_workers": 4,
+                    "num_workers": 0,
                     "shuffle": false,
                     "pin_memory": true,
                     "drop_last": false
@@ -46,21 +59,32 @@
 
         "calibration": {
             "which_dataset": {
-                "name":  ["data.dataset", "InpaintDataset"], // import Dataset() class / function(not recommend) from default file
+                "name": "InpaintDataset", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                   "data_root": "./datasets/maestro-v3.0.0/calibration/ground_truth",
-                    "sampled_bounds_path": "./datasets/maestro-v3.0.0/calibration/sampled_bounds",
+                    "data_root": "dldata/maestro-v3.0.0/splits/calibration/ground_truth",
                     "data_len": -1,
-
+                    "sample_rate": 22050,
+                    "audio_len": 184184,
+                    "load_len": 405000,
                     "mask_config": {
-                        "mask_mode": "center"
+                        "mask_mode": "long",
+                        "long": {
+                            "gap_length": 500, // in ms
+                            "start_gap_idx": "none"  //in ms, None means at the middle
+                        },
+                        "short": {
+                            "num_gaps": 4,
+                            "gap_length": 500,  // in ms
+                            "start_gap_idx": "none" // in ms, None means random. If not None this should be a list of length num_gaps
+                        }
                     }
                 }
             },
             "dataloader":{
+                "default_file_name": "data.dataset_audio",
                 "args":{
-                    "batch_size": 4,
-                    "num_workers": 8,
+                    "batch_size": 1,
+                    "num_workers": 0,
                     "pin_memory": true,
                     "shuffle": false,
                     "drop_last": false
@@ -69,20 +93,32 @@
         },
         "validation": {
             "which_dataset": {
-                "name": ["data.dataset", "InpaintDataset"], // import Dataset() class / function(not recommend) from default file
+                "name": "InpaintDataset", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                     "data_root": "./datasets/maestro-v3.0.0/validation/ground_truth",
-                    "sampled_bounds_path": "./datasets/maestro-v3.0.0/validation/sampled_bounds",
+                    "data_root": "dldata/maestro-v3.0.0/splits/validation/ground_truth",
                     "data_len": -1,
+                    "sample_rate": 22050,
+                    "audio_len": 184184,
+                    "load_len": 405000,
                     "mask_config": {
-                        "mask_mode": "center"
+                        "mask_mode": "long",
+                        "long": {
+                            "gap_length": 500, // in ms
+                            "start_gap_idx": "none"  //in ms, None means at the middle
+                        },
+                        "short": {
+                            "num_gaps": 4,
+                            "gap_length": 500,  // in ms
+                            "start_gap_idx": "none" // in ms, None means random. If not None this should be a list of length num_gaps
+                        }
                     }
                 }
             },
             "dataloader":{
+                "default_file_name": "data.dataset_audio",
                 "args":{
-                    "batch_size": 4,
-                    "num_workers": 8,
+                    "batch_size": 1,
+                    "num_workers": 0,
                     "pin_memory": true,
                     "shuffle": false,
                     "drop_last": false
@@ -91,20 +127,32 @@
         },
         "test": {
             "which_dataset": {
-                "name": ["data.dataset", "InpaintDataset"], // import Dataset() class / function(not recommend) from default file
+                "name": "InpaintDataset", // import Dataset() class / function(not recommend) from default file
                 "args":{
-                       "data_root": "./datasets/maestro-v3.0.0/test/ground_truth",
-                    "sampled_bounds_path": "./datasets/maestro-v3.0.0/test/sampled_bounds",
+                    "data_root": "dldata/maestro-v3.0.0/splits/test/ground_truth",
                     "data_len": -1,
+                    "sample_rate": 22050,
+                    "audio_len": 184184,
+                    "load_len": 405000,
                     "mask_config": {
-                        "mask_mode": "center"
+                        "mask_mode": "long",
+                        "long": {
+                            "gap_length": 500, // in ms
+                            "start_gap_idx": "none"  //in ms, None means at the middle
+                        },
+                        "short": {
+                            "num_gaps": 4,
+                            "gap_length": 500,  // in ms
+                            "start_gap_idx": "none" // in ms, None means random. If not None this should be a list of length num_gaps
+                        }
                     }
                 }
             },
             "dataloader":{
+                "default_file_name": "data.dataset_audio",
                 "args":{
-                    "batch_size": 4,
-                    "num_workers": 8,
+                    "batch_size": 1,
+                    "num_workers": 0,
                     "pin_memory": true,
                     "shuffle": false,
                     "drop_last": false
@@ -114,7 +162,7 @@
     },
 
     "model": { // networks/metrics/losses/optimizers/lr_schedulers is a list and model is a dict
-        "which_model": { // import designated  model(trainer) using arguments 
+        "which_model": { // import designated  model(trainer) using arguments
             "name": ["models.model", "Palette"], // import Model() class / function(not recommend) from models.model.py (default is [models.model.py])
             "args": {
 //                "sample_num": 8, // process of each image
@@ -132,34 +180,77 @@
                     }
                 ]
             }
-        }, 
+        },
         "which_networks": [ // import designated list of networks using arguments
             {
-                "name": ["models.network", "Network"], // import Network() class / function(not recommend) from default file (default is [models/network.py]) 
+                "name": ["models.audio_network", "Audio_Network"], // import Network() class / function(not recommend) from default file (default is [models/network.py])
                 "args": { // arguments to initialize network
                     "init_type": "kaiming", // method can be [normal | xavier| xavier_uniform | kaiming | orthogonal], default is kaiming
-                    "module_name": "guided_diffusion", // sr3 | guided_diffusion
+                    "module_name": "cqtdiff_maestro", // sr3 | guided_diffusion | cqtdiff_maestro
                     "unet": {
-                        "in_channel": 6,
-                        "out_channel": 3,
-                        "inner_channel": 64,
-                        "channel_mults": [
+                        "device": "cuda", // method can be [normal | xavier| xavier_uniform | kaiming | orthogonal], default is kaiming
+                        "args": {
+                        "network": {
+                        "use_fencoding": false,
+                        "use_norm": true,
+                        "filter_out_cqt_DC_Nyq": true,
+                        "depth": 7,
+                        "emb_dim": 256,
+                        "Ns": [
+                            64,
+                            96,
+                            96,
+                            128,
+                            128,
+                            256,
+                            256
+                        ],
+                        "attention_layers": [
+                            0,
+                            0,
+                            0,
+                            0,
                             1,
+                            1,
+                            1,
+                            1
+                        ],
+                        "Ss": [
                             2,
+                            2,
+                            2,
+                            2,
+                            2,
+                            2,
+                            2
+                        ],
+                        "num_dils": [
+                            2,
+                            3,
                             4,
-                            8
+                            5,
+                            6,
+                            7,
+                            7
                         ],
-                        "attn_res": [
-                            // 32,
-                            16
-                            // 8
-                        ],
-                        "num_head_channels": 32,
-                        "res_blocks": 2,
-                        "dropout": 0.2,
-                        "image_size": 256,
-                        "finetune_bounds": true
-                    },
+                        "cqt": {
+                            "window": "kaiser",
+                            "beta": 1,
+                            "num_octs": 7,
+                            "bin_per_oct": 64
+                        },
+                        "bottleneck_type": "res_dil_convs",
+                        "num_bottleneck_layers": 1,
+                        "attention_dict": {
+                            "num_heads": 8,
+                            "attn_dropout": 0.0,
+                            "bias_qkv": false,
+                            "N": 0,
+                            "rel_pos_num_buckets": 32,
+                            "rel_pos_max_distance": 64,
+                            "use_rel_pos": false,
+                            "Nproj": 8
+                        }}}},
                     "beta_schedule": {
                         "train": {
                             "schedule": "linear",
@@ -169,19 +260,19 @@
                         },
                         "test": {
                             "schedule": "cosine",
-                            "n_timestep": 200,
+                            "n_timestep": 100,
                             "linear_start": 1e-4,
                             "linear_end": 0.09
                         },
                          "calibration": {
                              "schedule": "cosine",
-                            "n_timestep": 200,
+                            "n_timestep": 100,
                             "linear_start": 1e-4,
                             "linear_end": 0.09
                         },
                         "validation": {
                             "schedule": "cosine",
-                            "n_timestep": 200,
+                            "n_timestep": 100,
                             "linear_start": 1e-4,
                             "linear_end": 0.09
                         }

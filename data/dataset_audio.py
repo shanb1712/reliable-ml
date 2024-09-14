@@ -29,7 +29,7 @@ def make_dataset(dir, masked_length):
 
 
 def soundfile_loader(f):
-    segnp, fs = sf.read(f)
+    segnp, fs = sf.read(f, dtype="float32")
     return segnp, fs
 
 
@@ -102,7 +102,7 @@ class InpaintDataset(data.Dataset):
         return
 
     def get_mask(self):
-        mask = np.ones((1, self.audio_len))  # assume between 5 and 6s of total length
+        mask = np.ones((1, self.audio_len), dtype="float32")  # assume between 5 and 6s of total length
         if self.mask_mode == 'long':
             gap = int(self.mask_config[self.mask_mode]['gap_length'] * self.sample_rate / 1000)
             if self.mask_config[self.mask_mode]['start_gap_idx'] == "none":
