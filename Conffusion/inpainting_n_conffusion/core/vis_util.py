@@ -1,5 +1,5 @@
 import numpy as np
-import util as Util
+import core.util as Util
 
 
 def create_image_grid(pred_l, pred_u, partial_gt, masked_input, gt_sample, n_rows=5):

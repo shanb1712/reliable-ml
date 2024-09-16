@@ -2,7 +2,6 @@ import argparse
 import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 from functools import partial
-os.environ['WANDB_DISABLED'] = 'true'
 import core.praser as Praser
 import core.util as Util
 import torch
