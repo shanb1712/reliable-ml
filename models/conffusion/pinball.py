@@ -12,7 +12,7 @@ class PinballLoss():
 
   def __call__(self, output, target):
       assert output.shape == target.shape
-      loss = torch.zeros_like(target, dtype=torch.float)
+      loss = torch.zeros_like(target, dtype=output.dtype)
       error = output - target
       smaller_index = error < 0
       bigger_index = 0 < error
