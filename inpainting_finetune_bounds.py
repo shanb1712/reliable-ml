@@ -44,9 +44,7 @@ def run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, v
                 val_masked_image = val_data["masked_samples"].to(device)
                 val_mask = val_data["sampled_masks"].to(device)
 
-            r1 = 0.05
-            r2 = -0.05
-            noise_level = (r1 - r2) * torch.rand_like(val_masked_image) + r2
+            noise_level = (opt["var"]) * torch.rand_like(val_masked_image)
 
             val_masked_image = val_masked_image + noise_level
 
@@ -143,9 +141,8 @@ def run_training(opt, diffusion_with_bounds, wandb_logger, device, optimizer, tr
             else:
                 masked_image = train_data["mask_image"].to(device)
                 mask = train_data["mask"].to(device)
-            r1 = 0.05
-            r2 = -0.05
-            noise_level = (r1 - r2) * torch.rand_like(masked_image) + r2
+
+            noise_level = (opt["var"]) * torch.rand_like(masked_image)
 
             gt_image = train_data["gt_image"].to(device)
             cond_image = masked_image + noise_level
@@ -264,6 +261,7 @@ if __name__ == '__main__':
     parser.add_argument('-P', '--port', default='21012', type=str)
     parser.add_argument('--n_soch_samples', type=int, default=50)
     parser.add_argument('--quantile', type=float, default=0.95)
+    parser.add_argument('--var', type=float, default=0.005)
     parser.add_argument('--enable_wandb', action='store_true')
     parser.add_argument('--clip_denoised', action='store_true')
     parser.add_argument('--finetune_loss', type=str, choices=['l2', 'quantile_regression'], default='quantile_regression')
@@ -279,4 +277,5 @@ if __name__ == '__main__':
     os.environ['CUDA_VISIBLE_DEVICES'] = gpu_str
 
     opt['world_size'] = 1
+    opt['var'] = args.var
     main_worker(0, opt)
