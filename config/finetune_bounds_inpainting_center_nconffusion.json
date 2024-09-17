@@ -16,7 +16,7 @@
     "datasets": { // train or test
         "train": { 
             "which_dataset": {  // import designated dataset using arguments 
-                "name": ["data.dataset_audio", "InpaintDataset"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
+                "name": ["data.bounds_dataset_audio", "InpaintDataset"], // import Dataset() class / function(not recommend) from data.dataset.py (default is [data.dataset.py])
                 "args":{ // arguments to initialize dataset
                     "data_root": "datasets/celebahq/flist/train.flist",
                     "data_len": -1,
@@ -46,7 +46,7 @@
 
         "calibration": {
             "which_dataset": {
-                "name":  ["data.dataset_audio", "InpaintDataset"], // import Dataset() class / function(not recommend) from default file
+                "name":  ["data.bounds_dataset_audio", "InpaintDataset"], // import Dataset() class / function(not recommend) from default file
                 "args":{
                    "data_root": "dldata/maestro-v3.0.0/splits/calibration/ground_truth",
                     "sampled_bounds_path": "dldata/maestro-v3.0.0/splits/calibration/sampled_bounds",
@@ -81,7 +81,7 @@
         },
         "validation": {
             "which_dataset": {
-                "name": ["data.dataset_audio", "InpaintDataset"], // import Dataset() class / function(not recommend) from default file
+                "name": ["data.bounds_dataset_audio", "InpaintDataset"], // import Dataset() class / function(not recommend) from default file
                 "args":{
                      "data_root": "dldata/maestro-v3.0.0/splits/validation/ground_truth",
                     "sampled_bounds_path": "dldata/maestro-v3.0.0/splits/validation/sampled_bounds",
@@ -116,7 +116,7 @@
         },
         "test": {
             "which_dataset": {
-                "name": ["data.dataset_audio", "InpaintDataset"], // import Dataset() class / function(not recommend) from default file
+                "name": ["data.bounds_dataset_audio", "InpaintDataset"], // import Dataset() class / function(not recommend) from default file
                 "args":{
                        "data_root": "dldata/maestro-v3.0.0/splits/test/ground_truth",
                     "sampled_bounds_path": "dldata/maestro-v3.0.0/splits/test/sampled_bounds",
