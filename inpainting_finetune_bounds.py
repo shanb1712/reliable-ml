@@ -1,7 +1,6 @@
 import argparse
 import os
 from functools import partial
-os.environ['WANDB_DISABLED'] = 'true'
 import core.praser as Praser
 import core.util as Util
 import torch
@@ -24,14 +23,14 @@ def run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, v
         val_batch_size = val_loader.batch_size
         dataset_len = len(val_loader.dataset)
 
-        sr_res = 256
-        n_img_channels = 3
-        all_val_pred_lower_bounds = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res, sr_res), device=device)
-        all_val_pred_upper_bounds = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res, sr_res), device=device)
-        all_val_gt_samples = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res, sr_res), device=device)
-        all_val_maskes = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res, sr_res), device=device)
-        all_val_partial_gt_images = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res, sr_res))
-        all_val_masked_samples = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res, sr_res))
+        sr_res = val_loader.dataset.audio_len
+        n_img_channels = 1
+        all_val_pred_lower_bounds = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res), device=device)
+        all_val_pred_upper_bounds = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res), device=device)
+        all_val_gt_samples = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res), device=device)
+        all_val_maskes = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res), device=device)
+        all_val_partial_gt_images = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res))
+        all_val_masked_samples = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res))
         # endregion
 
         for val_idx, val_data in enumerate(val_loader):
@@ -45,7 +44,13 @@ def run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, v
                 val_masked_image = val_data["masked_samples"].to(device)
                 val_mask = val_data["sampled_masks"].to(device)
 
-            val_pred_lower_bound, val_pred_upper_bound = diffusion_with_bounds(val_masked_image)
+            r1 = 0.05
+            r2 = -0.05
+            noise_level = (r1 - r2) * torch.rand_like(val_masked_image) + r2
+
+            val_masked_image = val_masked_image + noise_level
+
+            val_pred_lower_bound, val_pred_upper_bound = diffusion_with_bounds(val_masked_image, val_mask, val_gt_image)
 
             val_pred_lower_bound = (torch.zeros_like(val_masked_image) * (1. - val_mask) + val_mask * val_pred_lower_bound)
             val_pred_upper_bound = (torch.zeros_like(val_masked_image) * (1. - val_mask) + val_mask * val_pred_upper_bound)
@@ -90,12 +95,12 @@ def run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, v
 
         # region LOG TO WANDB
         if wandb_logger:
-            image_grid = vis_util.create_image_grid(pred_val_calibrated_l.detach().cpu() * 2 - 1,
-                                           pred_val_calibrated_u.detach().cpu() * 2 - 1,
-                                           all_val_partial_gt_images.detach().cpu() * 2 - 1,
-                                           all_val_masked_samples.detach().cpu() * 2 - 1,
-                                           all_val_gt_samples.detach().cpu() * 2 - 1)
-            wandb_logger.log_image("Validation/Images", image_grid, caption="Pred L, Pred U, GT, Masked Input, Full GT", commit=False)
+            # image_grid = vis_util.create_image_grid(pred_val_calibrated_l.detach().cpu() * 2 - 1,
+            #                                pred_val_calibrated_u.detach().cpu() * 2 - 1,
+            #                                all_val_partial_gt_images.detach().cpu() * 2 - 1,
+            #                                all_val_masked_samples.detach().cpu() * 2 - 1,
+            #                                all_val_gt_samples.detach().cpu() * 2 - 1)
+            # wandb_logger.log_image("Validation/Images", image_grid, caption="Pred L, Pred U, GT, Masked Input, Full GT", commit=False)
 
             wandb_logger.log_metrics({'Validation/Calibrated Pred Risk': calibrated_pred_risks_losses, 'Validation/val_step': val_step}, commit=False)
             wandb_logger.log_metrics({'Validation/Calibrated Pred Size Mean': calibrated_pred_sizes_mean, 'Validation/val_step': val_step}, commit=False)
@@ -136,12 +141,16 @@ def run_training(opt, diffusion_with_bounds, wandb_logger, device, optimizer, tr
                 masked_image = train_data["cond_image"].to(device)
                 mask = train_data["mask"].to(device)
             else:
-                masked_image = train_data["masked_samples"].to(device)
-                mask = train_data["sampled_masks"].to(device)
+                masked_image = train_data["mask_image"].to(device)
+                mask = train_data["mask"].to(device)
+            r1 = 0.05
+            r2 = -0.05
+            noise_level = (r1 - r2) * torch.rand_like(masked_image) + r2
 
             gt_image = train_data["gt_image"].to(device)
+            cond_image = masked_image + noise_level
 
-            pred_lower_bound, pred_upper_bound = diffusion_with_bounds(masked_image)
+            pred_lower_bound, pred_upper_bound = diffusion_with_bounds(cond_image, mask, gt_image)
             pred_lower_bound = (torch.zeros_like(masked_image) * (1. - mask) + mask * pred_lower_bound)
             pred_upper_bound = (torch.zeros_like(masked_image) * (1. - mask) + mask * pred_upper_bound)
             partial_gt = (torch.zeros_like(gt_image) * (1. - mask) + mask * gt_image)
@@ -247,7 +256,7 @@ def main_worker(gpu, opt):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config', type=str, default='config/finetune_bounds_inpainting_center_dm_sba.json', help='JSON file for configuration')
+    parser.add_argument('-c', '--config', type=str, default='config/finetune_bounds_inpainting_center_nconffusion.json', help='JSON file for configuration')
     parser.add_argument('-p', '--phase', type=str, choices=['calibration', 'validation', 'test'], help='Run train or test', default='calibration')
     parser.add_argument('-b', '--batch', type=int, default=None, help='Batch size in every gpu')
     parser.add_argument('-gpu', '--gpu_ids', type=str, default=None)
