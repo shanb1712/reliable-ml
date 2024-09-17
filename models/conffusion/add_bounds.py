@@ -28,22 +28,24 @@ class Conffusion(nn.Module):
         if load_finetuned:
             self.load_finetuned_network()
 
+    def forward(self, masked_images, mask, gt_image):
+        if 'audio' in self.baseModel.__name__.lower():
+            gt_image, mask, masked_images = [torch.squeeze(data.type(torch.float32), 1) for
+                                             data in
+                                             [gt_image, mask, masked_images]]
 
-    def forward(self, masked_images):
-        batch_size = masked_images.shape[0]
+        t = self.baseModel.diff_params.create_schedule(self.baseModel.num_timesteps).to(masked_images.device)
+        sigma = t[25].unsqueeze(-1).to(masked_images.device)
 
-        t = torch.full((batch_size,), self.prediction_time_step, device=masked_images.device, dtype=torch.long)
-        noise_level = extract(self.baseModel.gammas, t, x_shape=(1, 1)).to(masked_images.device)
-        predicted_l, predicted_u  = self.baseModel.denoise_fn(torch.cat([masked_images, masked_images], dim=1), noise_level, out_upper_lower=True)
+        predicted_l, predicted_u = self.baseModel.diff_params.denoiser(masked_images, self.baseModel.denoise_fn,
+                                                                       sigma.unsqueeze(-1),
+                                                                       out_upper_lower=True)
 
-        predicted_l = self.baseModel.predict_start_from_noise(masked_images, t, predicted_l)
-        predicted_u = self.baseModel.predict_start_from_noise(masked_images, t, predicted_u)
 
         predicted_l.clamp_(-1., 1.)
         predicted_u.clamp_(-1., 1.)
 
         return predicted_l, predicted_u
-
 
     def bounds_regression_loss_fn(self, pred_l, pred_u, gt_l, gt_u):
         lower_loss = self.criterion(pred_l, gt_l)
@@ -56,7 +58,6 @@ class Conffusion(nn.Module):
         upper_loss = self.q_hi_loss(pred_u, gt_hr)
         loss = lower_loss + upper_loss
         return loss
-
 
     def get_current_log(self):
         return self.log_dict
@@ -71,10 +72,10 @@ class Conffusion(nn.Module):
             state_dict[key] = param.cpu()
         torch.save(state_dict, gen_path)
         # opt
-        opt_state = {'epoch': epoch, 'iter': iter_step, 'pred_lambda_hat': pred_lambda_hat, 'scheduler': None, 'optimizer': None}
+        opt_state = {'epoch': epoch, 'iter': iter_step, 'pred_lambda_hat': pred_lambda_hat, 'scheduler': None,
+                     'optimizer': None}
         opt_state['optimizer'] = optimizer.state_dict()
         torch.save(opt_state, opt_path)
-
 
     def load_finetuned_network(self):
         load_path = self.opt['path']['bounds_resume_state']
