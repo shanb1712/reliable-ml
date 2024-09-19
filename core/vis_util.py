@@ -21,10 +21,10 @@ def create_image_row(pred_l, pred_u, partial_gt, masked_input, gt_sample):
     masked_sample_img = Util.tensor2img(masked_input)
     gt_sample_img = Util.tensor2img(gt_sample)
     partial_gt_img = Util.tensor2img(partial_gt)
-    image_row = np.concatenate((pred_lower_bound_img, pred_upper_bound_img, partial_gt_img, masked_sample_img, gt_sample_img), axis=-1)
+    image_row = np.concatenate((pred_lower_bound_img, pred_upper_bound_img, partial_gt_img, masked_sample_img, gt_sample_img), axis=1)
     return image_row
 
-def create_audio_row(pred_l, pred_u, partial_gt, masked_input, gt_sample, sample_rate=16000):
+def create_audio_row(pred_l, pred_u, partial_gt, masked_input, gt_sample):
     # Convert tensors to NumPy arrays (assuming they are 1D vectors for audio)
     pred_lower_bound_audio = pred_l.detach().cpu().numpy().squeeze()
     pred_upper_bound_audio = pred_u.detach().cpu().numpy().squeeze()
@@ -44,6 +44,7 @@ def create_audio_row(pred_l, pred_u, partial_gt, masked_input, gt_sample, sample
     ]
 
     return audio_clips
+
 
 def log_train(diffusion_with_bounds, wandb_logger, pred_l, pred_u, partial_gt, train_data):
     logs = diffusion_with_bounds.get_current_log()

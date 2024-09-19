@@ -28,30 +28,24 @@ class Conffusion(nn.Module):
         if load_finetuned:
             self.load_finetuned_network()
 
+    def forward(self, masked_images, mask, gt_image):
+        if 'audio' in self.baseModel.__name__.lower():
+            gt_image, mask, masked_images = [torch.squeeze(data.type(torch.float32), 1) for
+                                             data in
+                                             [gt_image, mask, masked_images]]
 
-    def forward(self, masked_images):
-        device=masked_images.device
-        timestamp=2
-        # TODO: I don;t think this is the desired output. We should further validate it
-        t = self.baseModel.diff_params.create_schedule(self.baseModel.num_timesteps).to(device) # shape 37
-        sigma=t[timestamp].unsqueeze(-1).to(device)# shape 1
+        t = self.baseModel.diff_params.create_schedule(self.baseModel.num_timesteps).to(masked_images.device)
+        sigma = t[25].unsqueeze(-1).to(masked_images.device)
 
-        noise=self.baseModel.diff_params.sample_prior(masked_images.shape,sigma)  # 1 1 184184
-        x = (masked_images +noise)[0] # 1 1 184184
+        predicted_l, predicted_u = self.baseModel.diff_params.denoiser(masked_images, self.baseModel.denoise_fn,
+                                                                       sigma.unsqueeze(-1),
+                                                                       out_upper_lower=True)
 
-        # t = torch.full((batch_size,), 25, device=masked_images.device, dtype=torch.long)
-        predicted_l, predicted_u = self.baseModel.diff_params.denoiser(x, self.baseModel.denoise_fn, sigma.unsqueeze(-1),
-                                                    out_upper_lower=True)
-        if self.baseModel.args.tester.filter_out_cqt_DC_Nyq:
-            predicted_l = self.baseModel.denoise_fn.CQTransform.apply_hpf_DC(predicted_l)
-
-            predicted_u = self.baseModel.denoise_fn.CQTransform.apply_hpf_DC(predicted_u)
 
         predicted_l.clamp_(-1., 1.)
         predicted_u.clamp_(-1., 1.)
 
         return predicted_l, predicted_u
-
 
     def bounds_regression_loss_fn(self, pred_l, pred_u, gt_l, gt_u):
         lower_loss = self.criterion(pred_l, gt_l)
@@ -64,7 +58,6 @@ class Conffusion(nn.Module):
         upper_loss = self.q_hi_loss(pred_u, gt_hr)
         loss = lower_loss + upper_loss
         return loss
-
 
     def get_current_log(self):
         return self.log_dict
@@ -79,10 +72,10 @@ class Conffusion(nn.Module):
             state_dict[key] = param.cpu()
         torch.save(state_dict, gen_path)
         # opt
-        opt_state = {'epoch': epoch, 'iter': iter_step, 'pred_lambda_hat': pred_lambda_hat, 'scheduler': None, 'optimizer': None}
+        opt_state = {'epoch': epoch, 'iter': iter_step, 'pred_lambda_hat': pred_lambda_hat, 'scheduler': None,
+                     'optimizer': None}
         opt_state['optimizer'] = optimizer.state_dict()
         torch.save(opt_state, opt_path)
-
 
     def load_finetuned_network(self):
         load_path = self.opt['path']['bounds_resume_state']

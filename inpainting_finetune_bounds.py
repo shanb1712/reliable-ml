@@ -1,11 +1,9 @@
 import argparse
 import os
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:512"
 from functools import partial
 import core.praser as Praser
 import core.util as Util
 import torch
-torch.cuda.empty_cache()
 from core import vis_util
 from core.calibration_masked import calibrate_model
 from core.eval_utils_masked import get_rcps_metrics
@@ -25,7 +23,7 @@ def run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, v
         val_batch_size = val_loader.batch_size
         dataset_len = len(val_loader.dataset)
 
-        sr_res = 184184
+        sr_res = val_loader.dataset.audio_len
         n_img_channels = 1
         all_val_pred_lower_bounds = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res), device=device)
         all_val_pred_upper_bounds = torch.zeros((min(dataset_len, len(val_loader) * val_batch_size), n_img_channels, sr_res), device=device)
@@ -46,7 +44,11 @@ def run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, v
                 val_masked_image = val_data["masked_samples"].to(device)
                 val_mask = val_data["sampled_masks"].to(device)
 
-            val_pred_lower_bound, val_pred_upper_bound = diffusion_with_bounds(val_masked_image)
+            noise_level = (opt["var"]) * torch.rand_like(val_masked_image)
+
+            val_masked_image = val_masked_image + noise_level
+
+            val_pred_lower_bound, val_pred_upper_bound = diffusion_with_bounds(val_masked_image, val_mask, val_gt_image)
 
             val_pred_lower_bound = (torch.zeros_like(val_masked_image) * (1. - val_mask) + val_mask * val_pred_lower_bound)
             val_pred_upper_bound = (torch.zeros_like(val_masked_image) * (1. - val_mask) + val_mask * val_pred_upper_bound)
@@ -84,18 +86,18 @@ def run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, v
 
 
         # region CALIBRATION
-        pred_val_lambda_hat, pred_val_calibrated_l, pred_val_calibrated_u = calibrate_model(all_val_pred_lower_bounds, all_val_pred_upper_bounds, all_val_gt_samples, all_val_maskes[:,0])
-        calibrated_pred_risks_losses, calibrated_pred_sizes_mean, calibrated_pred_sizes_median, calibrated_pred_stratified_risks = get_rcps_metrics(pred_val_calibrated_l, pred_val_calibrated_u, all_val_gt_samples, all_val_maskes[:,0])
+        pred_val_lambda_hat, pred_val_calibrated_l, pred_val_calibrated_u = calibrate_model(all_val_pred_lower_bounds, all_val_pred_upper_bounds, all_val_gt_samples, all_val_maskes)
+        calibrated_pred_risks_losses, calibrated_pred_sizes_mean, calibrated_pred_sizes_median, calibrated_pred_stratified_risks = get_rcps_metrics(pred_val_calibrated_l, pred_val_calibrated_u, all_val_gt_samples, all_val_maskes)
 
         # endregion
 
         # region LOG TO WANDB
         if wandb_logger:
-            image_grid = vis_util.create_image_grid(pred_val_calibrated_l.detach().cpu() * 2 - 1,
-                                           pred_val_calibrated_u.detach().cpu() * 2 - 1,
-                                           all_val_partial_gt_images.detach().cpu() * 2 - 1,
-                                           all_val_masked_samples.detach().cpu() * 2 - 1,
-                                           all_val_gt_samples.detach().cpu() * 2 - 1)
+            # image_grid = vis_util.create_image_grid(pred_val_calibrated_l.detach().cpu() * 2 - 1,
+            #                                pred_val_calibrated_u.detach().cpu() * 2 - 1,
+            #                                all_val_partial_gt_images.detach().cpu() * 2 - 1,
+            #                                all_val_masked_samples.detach().cpu() * 2 - 1,
+            #                                all_val_gt_samples.detach().cpu() * 2 - 1)
             # wandb_logger.log_image("Validation/Images", image_grid, caption="Pred L, Pred U, GT, Masked Input, Full GT", commit=False)
 
             wandb_logger.log_metrics({'Validation/Calibrated Pred Risk': calibrated_pred_risks_losses, 'Validation/val_step': val_step}, commit=False)
@@ -136,15 +138,16 @@ def run_training(opt, diffusion_with_bounds, wandb_logger, device, optimizer, tr
             if opt['train']['finetune_loss'] == 'quantile_regression':
                 masked_image = train_data["cond_image"].to(device)
                 mask = train_data["mask"].to(device)
-                # masked_image = train_data["masked_samples"].to(device) # the generated signal 
-                # mask = train_data["sampled_masks"].to(device) #mask to smaple the signal
             else:
-                masked_image = train_data["masked_samples"].to(device) # the generated signal 
-                mask = train_data["sampled_masks"].to(device) #mask to smaple the signal
+                masked_image = train_data["mask_image"].to(device)
+                mask = train_data["mask"].to(device)
+
+            noise_level = (opt["var"]) * torch.rand_like(masked_image)
 
             gt_image = train_data["gt_image"].to(device)
+            cond_image = masked_image + noise_level
 
-            pred_lower_bound, pred_upper_bound = diffusion_with_bounds(masked_image)
+            pred_lower_bound, pred_upper_bound = diffusion_with_bounds(cond_image, mask, gt_image)
             pred_lower_bound = (torch.zeros_like(masked_image) * (1. - mask) + mask * pred_lower_bound)
             pred_upper_bound = (torch.zeros_like(masked_image) * (1. - mask) + mask * pred_upper_bound)
             partial_gt = (torch.zeros_like(gt_image) * (1. - mask) + mask * gt_image)
@@ -250,7 +253,7 @@ def main_worker(gpu, opt):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--config', type=str, default='config/finetune_bounds_inpainting_center_dm_sba.json', help='JSON file for configuration')
+    parser.add_argument('-c', '--config', type=str, default='config/finetune_bounds_inpainting_center_nconffusion.json', help='JSON file for configuration')
     parser.add_argument('-p', '--phase', type=str, choices=['calibration', 'validation', 'test'], help='Run train or test', default='calibration')
     parser.add_argument('-b', '--batch', type=int, default=None, help='Batch size in every gpu')
     parser.add_argument('-gpu', '--gpu_ids', type=str, default=None)
@@ -258,11 +261,12 @@ if __name__ == '__main__':
     parser.add_argument('-P', '--port', default='21012', type=str)
     parser.add_argument('--n_soch_samples', type=int, default=50)
     parser.add_argument('--quantile', type=float, default=0.95)
+    parser.add_argument('--var', type=float, default=0.005)
     parser.add_argument('--enable_wandb', action='store_true')
     parser.add_argument('--clip_denoised', action='store_true')
     parser.add_argument('--finetune_loss', type=str, choices=['l2', 'quantile_regression'], default='quantile_regression')
     parser.add_argument('--distributed_worker_id', type=int, default=None)
-    parser.add_argument('--prediction_time_step', type=int, default=35)
+    parser.add_argument('--prediction_time_step', type=int, default=155)
     parser.add_argument('--wandb_run_name', type=str, default=None)
     parser.add_argument('--lr', type=float, default=1e-5)
 
@@ -271,7 +275,7 @@ if __name__ == '__main__':
 
     gpu_str = ','.join(str(x) for x in opt['gpu_ids'])
     os.environ['CUDA_VISIBLE_DEVICES'] = gpu_str
-    print('export CUDA_VISIBLE_DEVICES={}'.format(gpu_str))
 
     opt['world_size'] = 1
+    opt['var'] = args.var
     main_worker(0, opt)

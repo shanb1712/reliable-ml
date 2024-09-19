@@ -720,6 +720,8 @@ class Unet_CQT_oct_with_attention(nn.Module):
                                         ResnetBlock(dim_in, dim_out, use_norm=self.use_norm,num_dils= self.num_dils[i],attention_dict=attn_dict, bias=False, emb_dim=self.emb_dim, init=init, init_zero=init_zero, Fdim=(i+1)*self.bins_per_oct),
                                         ]))
 
+
+
         #self.cropconcat = CropConcatBlock()
 
 
