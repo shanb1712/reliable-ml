@@ -24,11 +24,10 @@ def create_image_row(pred_l, pred_u, partial_gt, masked_input, gt_sample):
     image_row = np.concatenate((pred_lower_bound_img, pred_upper_bound_img, partial_gt_img, masked_sample_img, gt_sample_img), axis=1)
     return image_row
 
-def create_audio_row(pred_l, pred_u, partial_gt, masked_input, gt_sample):
+def create_audio_row(pred_l, pred_u, masked_input, gt_sample):
     # Convert tensors to NumPy arrays (assuming they are 1D vectors for audio)
     pred_lower_bound_audio = pred_l.detach().cpu().numpy().squeeze()
     pred_upper_bound_audio = pred_u.detach().cpu().numpy().squeeze()
-    partial_gt_audio = partial_gt.detach().cpu().numpy().squeeze()
     masked_sample_audio = masked_input.detach().cpu().numpy().squeeze()
     gt_sample_audio = gt_sample.detach().cpu().numpy().squeeze()
 
@@ -38,7 +37,6 @@ def create_audio_row(pred_l, pred_u, partial_gt, masked_input, gt_sample):
     audio_clips = [
         (pred_lower_bound_audio, "Pred Lower Bound"),
         (pred_upper_bound_audio, "Pred Upper Bound"),
-        (partial_gt_audio, "Partial Ground Truth"),
         (masked_sample_audio, "Masked Input"),
         (gt_sample_audio, "Full Ground Truth")
     ]
@@ -46,10 +44,10 @@ def create_audio_row(pred_l, pred_u, partial_gt, masked_input, gt_sample):
     return audio_clips
 
 
-def log_train(diffusion_with_bounds, wandb_logger, pred_l, pred_u, partial_gt, train_data):
+def log_train(diffusion_with_bounds, wandb_logger, pred_l, pred_u, cond_image, gt_image):
     logs = diffusion_with_bounds.get_current_log()
-    audio_clips = create_audio_row(pred_l=pred_l[0].detach().cpu(), pred_u=pred_u[0].detach().cpu(), partial_gt=partial_gt[0].detach().cpu(),
-                                    masked_input=train_data['cond_image'][0], gt_sample=train_data['gt_image'][0])
+    audio_clips = create_audio_row(pred_l=pred_l[0].detach().cpu(), pred_u=pred_u[0].detach().cpu(),
+                                    masked_input=cond_image[0].detach().cpu(), gt_sample=gt_image[0].detach().cpu())
 
     if wandb_logger:
         # wandb_logger.log_image("Finetune/Images", image_to_log, caption="Pred L, Pred U, GT, Masked Input, Full GT", commit=False)

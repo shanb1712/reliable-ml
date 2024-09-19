@@ -46,13 +46,17 @@ def run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, v
 
             noise_level = (opt["var"]) * torch.rand_like(val_masked_image)
 
-            val_masked_image = val_masked_image + noise_level
+            # val_masked_image = val_masked_image + noise_level
+            val_masked_image = val_gt_image + noise_level
 
             val_pred_lower_bound, val_pred_upper_bound = diffusion_with_bounds(val_masked_image, val_mask, val_gt_image)
 
-            val_pred_lower_bound = (torch.zeros_like(val_masked_image) * (1. - val_mask) + val_mask * val_pred_lower_bound)
-            val_pred_upper_bound = (torch.zeros_like(val_masked_image) * (1. - val_mask) + val_mask * val_pred_upper_bound)
-            partial_gt = (torch.zeros_like(val_masked_image) * (1. - val_mask) + val_mask * val_gt_image)
+            # val_pred_lower_bound = (torch.zeros_like(val_masked_image) * (1. - val_mask) + val_mask * val_pred_lower_bound)
+            # val_pred_upper_bound = (torch.zeros_like(val_masked_image) * (1. - val_mask) + val_mask * val_pred_upper_bound)
+            # partial_gt = (torch.zeros_like(val_masked_image) * (1. - val_mask) + val_mask * val_gt_image)
+
+            val_pred_lower_bound = val_pred_lower_bound.unsqueeze(1)
+            val_pred_upper_bound = val_pred_upper_bound.unsqueeze(1)
 
             if opt['train']['finetune_loss'] == 'quantile_regression':
                 val_bounds_loss = diffusion_with_bounds.quantile_regression_loss_fn(val_pred_lower_bound, val_pred_upper_bound, val_gt_image)
@@ -71,7 +75,6 @@ def run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, v
             all_val_pred_upper_bounds[start_idx:end_idx] = val_pred_upper_bound
             all_val_gt_samples[start_idx:end_idx] = val_gt_image
             all_val_maskes[start_idx:end_idx] = val_mask.detach().cpu()
-            all_val_partial_gt_images[start_idx:end_idx] = partial_gt
             all_val_masked_samples[start_idx:end_idx] = val_masked_image.detach().cpu()
             #endregion
 
@@ -142,20 +145,22 @@ def run_training(opt, diffusion_with_bounds, wandb_logger, device, optimizer, tr
                 masked_image = train_data["mask_image"].to(device)
                 mask = train_data["mask"].to(device)
 
-            noise_level = (opt["var"]) * torch.rand_like(masked_image)
-
             gt_image = train_data["gt_image"].to(device)
-            cond_image = masked_image + noise_level
+            noise_level = (opt["var"]) * torch.rand_like(gt_image)
+            # cond_image = masked_image + noise_level
+            cond_image = gt_image + noise_level
 
             pred_lower_bound, pred_upper_bound = diffusion_with_bounds(cond_image, mask, gt_image)
-            pred_lower_bound = (torch.zeros_like(masked_image) * (1. - mask) + mask * pred_lower_bound)
-            pred_upper_bound = (torch.zeros_like(masked_image) * (1. - mask) + mask * pred_upper_bound)
-            partial_gt = (torch.zeros_like(gt_image) * (1. - mask) + mask * gt_image)
+            # pred_lower_bound = (torch.zeros_like(masked_image) * (1. - mask) + mask * pred_lower_bound)
+            # pred_upper_bound = (torch.zeros_like(masked_image) * (1. - mask) + mask * pred_upper_bound)
+            # partial_gt = (torch.zeros_like(gt_image) * (1. - mask) + mask * gt_image)
             optimizer.zero_grad()
 
+            pred_lower_bound = pred_lower_bound.unsqueeze(1)
+            pred_upper_bound = pred_upper_bound.unsqueeze(1)
 
             if opt['train']['finetune_loss'] == 'quantile_regression':
-                bounds_loss = diffusion_with_bounds.quantile_regression_loss_fn(pred_lower_bound, pred_upper_bound, partial_gt)
+                bounds_loss = diffusion_with_bounds.quantile_regression_loss_fn(pred_lower_bound, pred_upper_bound, gt_image)
             else:
                 sampled_l_bound = train_data["lower_bound"].to(device)
                 sampled_u_bound = train_data["upper_bound"].to(device)
@@ -169,15 +174,16 @@ def run_training(opt, diffusion_with_bounds, wandb_logger, device, optimizer, tr
             optimizer.step()
 
             if current_step % opt['train']['print_freq'] == 0 or current_step - 1 == 0:
-                vis_util.log_train(diffusion_with_bounds, wandb_logger, pred_lower_bound, pred_upper_bound, partial_gt, train_data)
+                vis_util.log_train(diffusion_with_bounds, wandb_logger, pred_lower_bound, pred_upper_bound, cond_image, gt_image)
 
             if current_step % opt['train']['val_freq'] == 0 or current_step - 1 == 0:
                 calibrated_pred_risks_losses, calibrated_pred_sizes, pred_val_lambda_hat = run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, val_loader)
                 val_step += 1
                 if calibrated_pred_risks_losses < 0.1 and calibrated_pred_sizes < best_interval_size:
                     print(f'Saving best model and training states, interval size is {calibrated_pred_sizes}, lambda_hat is {pred_val_lambda_hat}')
-                    diffusion_with_bounds.save_best_network(current_epoch, current_step, optimizer, pred_lambda_hat=pred_val_lambda_hat)
+                    diffusion_with_bounds.save_best_network(current_epoch, current_step, optimizer, pred_lambda_hat=pred_val_lambda_hat, wandb_logger=wandb_logger._wandb)
                     best_interval_size = calibrated_pred_sizes
+                    
 
 def main_worker(gpu, opt):
 

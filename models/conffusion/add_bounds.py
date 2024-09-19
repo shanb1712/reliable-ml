@@ -28,14 +28,17 @@ class Conffusion(nn.Module):
         if load_finetuned:
             self.load_finetuned_network()
 
-    def forward(self, masked_images, mask, gt_image):
+    def forward(self, masked_images, mask, gt_image, sigma=None):
         if 'audio' in self.baseModel.__name__.lower():
             gt_image, mask, masked_images = [torch.squeeze(data.type(torch.float32), 1) for
                                              data in
                                              [gt_image, mask, masked_images]]
 
         t = self.baseModel.diff_params.create_schedule(self.baseModel.num_timesteps).to(masked_images.device)
-        sigma = t[25].unsqueeze(-1).to(masked_images.device)
+
+        if sigma is None:
+            sigma = t[0].unsqueeze(-1).to(masked_images.device)
+
 
         predicted_l, predicted_u = self.baseModel.diff_params.denoiser(masked_images, self.baseModel.denoise_fn,
                                                                        sigma.unsqueeze(-1),
@@ -62,20 +65,35 @@ class Conffusion(nn.Module):
     def get_current_log(self):
         return self.log_dict
 
-    def save_best_network(self, epoch, iter_step, optimizer, pred_lambda_hat):
+
+    def save_best_network(self, epoch, iter_step, optimizer, pred_lambda_hat, wandb_logger):
+        # Define paths for generator and optimizer checkpoints
         gen_path = os.path.join(self.opt['path']['checkpoint'], 'best_network_gen.pth'.format(iter_step, epoch))
         opt_path = os.path.join(self.opt['path']['checkpoint'], 'best_network_opt.pth'.format(iter_step, epoch))
-        # gen
-
+        
+        # Save generator (model) state_dict
         state_dict = self.state_dict()
         for key, param in state_dict.items():
             state_dict[key] = param.cpu()
         torch.save(state_dict, gen_path)
-        # opt
-        opt_state = {'epoch': epoch, 'iter': iter_step, 'pred_lambda_hat': pred_lambda_hat, 'scheduler': None,
-                     'optimizer': None}
-        opt_state['optimizer'] = optimizer.state_dict()
+        
+        # Save optimizer state
+        opt_state = {
+            'epoch': epoch,
+            'iter': iter_step,
+            'pred_lambda_hat': pred_lambda_hat,
+            'scheduler': None,
+            'optimizer': optimizer.state_dict()
+        }
         torch.save(opt_state, opt_path)
+        
+        # Log to wandb
+        wandb_logger.save(gen_path)
+        wandb_logger.save(opt_path)
+
+        # Optionally log additional info like metrics
+        wandb_logger.log({"epoch": epoch, "iteration": iter_step, "best_model_saved": True})
+
 
     def load_finetuned_network(self):
         load_path = self.opt['path']['bounds_resume_state']
