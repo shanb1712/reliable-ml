@@ -36,13 +36,17 @@ class Conffusion(nn.Module):
 
         t = self.baseModel.diff_params.create_schedule(self.baseModel.num_timesteps).to(masked_images.device)
 
-        if sigma is None:
-            sigma = t[0].unsqueeze(-1).to(masked_images.device)
+   
+        sigma = t[0].unsqueeze(-1).to(masked_images.device)
 
 
-        predicted_l, predicted_u = self.baseModel.diff_params.denoiser(masked_images, self.baseModel.denoise_fn,
+        predicted_l = self.baseModel.diff_params.denoiser(masked_images, self.baseModel.denoise_fn,
                                                                        sigma.unsqueeze(-1),
-                                                                       out_upper_lower=True)
+                                                                       out_upper_lower=False)
+        
+        predicted_u = self.baseModel.diff_params.denoiser(masked_images, self.baseModel.denoise_fn,
+                                                                       sigma.unsqueeze(-1),
+                                                                       out_upper_lower=False)
 
 
         predicted_l.clamp_(-1., 1.)

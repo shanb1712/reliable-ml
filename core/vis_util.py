@@ -30,6 +30,7 @@ def create_audio_row(pred_l, pred_u, masked_input, gt_sample):
     pred_upper_bound_audio = pred_u.detach().cpu().numpy().squeeze()
     masked_sample_audio = masked_input.detach().cpu().numpy().squeeze()
     gt_sample_audio = gt_sample.detach().cpu().numpy().squeeze()
+    ci_intervals = (pred_upper_bound_audio-pred_lower_bound_audio)
 
 
     # Concatenate all audio clips into one array
@@ -38,7 +39,8 @@ def create_audio_row(pred_l, pred_u, masked_input, gt_sample):
         (pred_lower_bound_audio, "Pred Lower Bound"),
         (pred_upper_bound_audio, "Pred Upper Bound"),
         (masked_sample_audio, "Masked Input"),
-        (gt_sample_audio, "Full Ground Truth")
+        (gt_sample_audio, "Full Ground Truth"),
+        (ci_intervals, "CI intervals (upper-lower)")
     ]
 
     return audio_clips
