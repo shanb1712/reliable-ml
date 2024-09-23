@@ -40,14 +40,9 @@ class Conffusion(nn.Module):
         sigma = t[0].unsqueeze(-1).to(masked_images.device)
 
 
-        predicted_l = self.baseModel.diff_params.denoiser(masked_images, self.baseModel.denoise_fn,
+        predicted_l,predicted_u = self.baseModel.diff_params.denoiser(masked_images, self.baseModel.denoise_fn,
                                                                        sigma.unsqueeze(-1),
-                                                                       out_upper_lower=False)
-        
-        predicted_u = self.baseModel.diff_params.denoiser(masked_images, self.baseModel.denoise_fn,
-                                                                       sigma.unsqueeze(-1),
-                                                                       out_upper_lower=False)
-
+                                                                       out_upper_lower=True)
 
         predicted_l.clamp_(-1., 1.)
         predicted_u.clamp_(-1., 1.)

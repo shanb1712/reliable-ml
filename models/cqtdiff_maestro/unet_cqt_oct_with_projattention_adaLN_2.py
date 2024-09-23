@@ -724,6 +724,24 @@ class Unet_CQT_oct_with_attention(nn.Module):
 
         #self.cropconcat = CropConcatBlock()
 
+        if True: #TODO: Add the finetune_bounds condition here from args
+            print("Initializing outer and upper bounds layers")
+            # Two final layers for the 2D time-frequency representation
+            self.final_lower = nn.Sequential(
+                nn.Conv2d(1, 1, kernel_size=3, bias=False, padding=1),  # 1x1 conv to keep the dimensions the same
+                nn.BatchNorm2d(1),  # BatchNorm for normalization
+                nn.ReLU(inplace=True)  # Non-linearity to introduce variation between the outputs
+            )
+
+            self.final_upper = nn.Sequential(
+                nn.Conv2d(1, 1, kernel_size=3, bias=False, padding=1),  # 1x1 conv to keep the dimensions the same
+                nn.BatchNorm2d(1),  # BatchNorm for normalization
+                nn.ReLU(inplace=True)  # Non-linearity to introduce variation between the outputs
+            )
+
+            # Initialize weights of final_lower and final_upper
+            nn.init.kaiming_uniform_(self.final_lower[0].weight, nonlinearity='relu')
+            nn.init.kaiming_uniform_(self.final_upper[0].weight, nonlinearity='relu')
 
 
 
@@ -838,25 +856,52 @@ class Unet_CQT_oct_with_attention(nn.Module):
                 X=self.upsamplerT(X) #call contiguous() here?
                 Xout=self.upsamplerT(Xout) #call contiguous() here?
 
+        # Apply the final lower and upper layers if requested
         if out_upper_lower:
-            X_list_out_upper = X_list_out.copy()
-            # Predict lower bound
-            pred_time_lower = self.CQTransform.bwd(X_list_out)
-            pred_time_lower = pred_time_lower.squeeze(1)
-            pred_time_lower = pred_time_lower[:, 0:inputs.shape[-1]]
+            # Apply the lower and upper bound heads to each octave
+            pred_lower_list = []
+            pred_upper_list = []
+            for octave_output in X_list_out:
+                # Convert complex-valued data to real by splitting into real and imaginary parts
+                real_input = torch.view_as_real(octave_output)  # Shape (B, 1, 64, 32, 2), where the last dim has real and imag parts
 
-            # Predict upper bound
-            pred_time_upper = self.CQTransform.bwd(X_list_out_upper)
+                # Split into real and imaginary parts for processing (remove the last dimension)
+                real_part = real_input[..., 0]  # Shape (B, 1, 64, 32), real part
+                imag_part = real_input[..., 1]  # Shape (B, 1, 64, 32), imaginary part
+
+                # Process real and imaginary parts separately
+                real_lower = self.final_lower(real_part)  # Now 4D tensor (B, 1, 64, 32)
+                imag_lower = self.final_lower(imag_part)  # Now 4D tensor (B, 1, 64, 32)
+                real_upper = self.final_upper(real_part)  # Now 4D tensor (B, 1, 64, 32)
+                imag_upper = self.final_upper(imag_part)  # Now 4D tensor (B, 1, 64, 32)
+
+                # Recombine real and imaginary parts into complex tensors
+                pred_lower = torch.view_as_complex(torch.stack([real_lower, imag_lower], dim=-1))  # Combine to complex
+                pred_upper = torch.view_as_complex(torch.stack([real_upper, imag_upper], dim=-1))  # Combine to complex
+
+                # Add to the lists
+                pred_lower_list.append(pred_lower)  # Add octave result to list
+                pred_upper_list.append(pred_upper)  # Add octave result to list
+
+            # Convert both outputs back from time-frequency representation to time domain
+            pred_time_lower = self.CQTransform.bwd(pred_lower_list)  # Inverse CQT for lower bound
+            pred_time_upper = self.CQTransform.bwd(pred_upper_list)  # Inverse CQT for upper bound
+
+            pred_time_lower = pred_time_lower.squeeze(1)
             pred_time_upper = pred_time_upper.squeeze(1)
+
+            pred_time_lower = pred_time_lower[:, 0:inputs.shape[-1]]
             pred_time_upper = pred_time_upper[:, 0:inputs.shape[-1]]
+
             assert (pred_time_lower.shape == inputs.shape) and (pred_time_upper.shape == inputs.shape), "bad shapes"
             return pred_time_lower, pred_time_upper
-        else:
-            pred_time = self.CQTransform.bwd(X_list_out)
-            pred_time = pred_time.squeeze(1)
-            pred_time = pred_time[:, 0:inputs.shape[-1]]
-            assert pred_time.shape == inputs.shape, "bad shapes"
-            return pred_time
+        
+        # Original single output
+        pred_time = self.CQTransform.bwd(X_list_out)
+        pred_time = pred_time.squeeze(1)
+        pred_time = pred_time[:, 0:inputs.shape[-1]]
+        assert pred_time.shape == inputs.shape, "bad shapes"
+        return pred_time
 
             
 
