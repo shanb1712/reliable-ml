@@ -36,6 +36,19 @@ def make_dataset(dir):
     return audios
 
 
+def make_dataset_extracted_bounds(dir):
+    if os.path.isfile(dir):
+        audios = [i for i in np.genfromtxt(dir, dtype=np.str, encoding='utf-8')]
+    else:
+        audios = []
+        assert os.path.isdir(dir), '%s is not a valid directory' % dir
+        for root, _, fnames in sorted(os.walk(dir)):
+            for fname in sorted(fnames):
+                path = os.path.join(root, fname)
+                audios.append(path)
+
+    return audios
+
 def soundfile_loader(f):
     segnp, fs = sf.read(f)
     return segnp, fs
@@ -61,10 +74,10 @@ class BoundsInpaintDataset(data.Dataset):
         self.masked_length = self.mask_config[self.mask_mode]['gap_length']
 
         self.audios = make_dataset(data_root)
-        lower_bounds = make_dataset(f"{sampled_bounds_path}/{self.masked_length}/lower_bounds")
-        upper_bounds = make_dataset(f"{sampled_bounds_path}/{self.masked_length}/upper_bounds")
-        sampled_masks = make_dataset(f"{sampled_bounds_path}/{self.masked_length}/masks")
-        masked_samples = make_dataset(f"{sampled_bounds_path}/{self.masked_length}/masked_samples")
+        lower_bounds = make_dataset_extracted_bounds(f"{sampled_bounds_path}/{self.masked_length}/lower_bounds")
+        upper_bounds = make_dataset_extracted_bounds(f"{sampled_bounds_path}/{self.masked_length}/upper_bounds")
+        sampled_masks = make_dataset_extracted_bounds(f"{sampled_bounds_path}/{self.masked_length}/masks")
+        masked_samples = make_dataset_extracted_bounds(f"{sampled_bounds_path}/{self.masked_length}/masked_samples")
 
         if self.data_len > 0:
             self.audios = self.audios[:int(data_len)]
@@ -177,7 +190,7 @@ class UncroppingDataset(data.Dataset):
     def __getitem__(self, index):
         ret = {}
         path = self.audios[index]
-        img = self.tfs(self.loader(path))
+        audio = self.tfs(self.loader(path))
         mask = self.get_mask()
         cond_audio = audio * mask + mask * torch.randn_like(audio)
         mask_audio = audio * mask
