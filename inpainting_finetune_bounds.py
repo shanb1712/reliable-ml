@@ -169,14 +169,14 @@ def run_training(opt, diffusion_with_bounds, wandb_logger, device, optimizer, tr
             optimizer.step()
 
             if current_step % opt['train']['print_freq'] == 0 or current_step - 1 == 0:
-                vis_util.log_train(diffusion_with_bounds, wandb_logger, pred_lower_bound, pred_upper_bound, partial_gt, train_data)
+                vis_util.log_train(diffusion_with_bounds, wandb_logger, pred_lower_bound, pred_upper_bound, cond_image, gt_image)
 
             if current_step % opt['train']['val_freq'] == 0 or current_step - 1 == 0:
                 calibrated_pred_risks_losses, calibrated_pred_sizes, pred_val_lambda_hat = run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, val_loader)
                 val_step += 1
                 if calibrated_pred_risks_losses < 0.1 and calibrated_pred_sizes < best_interval_size:
                     print(f'Saving best model and training states, interval size is {calibrated_pred_sizes}, lambda_hat is {pred_val_lambda_hat}')
-                    diffusion_with_bounds.save_best_network(current_epoch, current_step, optimizer, pred_lambda_hat=pred_val_lambda_hat)
+                    diffusion_with_bounds.save_best_network(current_epoch, current_step, optimizer, pred_lambda_hat=pred_val_lambda_hat, wandb_logger=wandb_logger._wandb)
                     best_interval_size = calibrated_pred_sizes
 
 def main_worker(gpu, opt):
