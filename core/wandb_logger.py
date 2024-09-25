@@ -52,6 +52,18 @@ class WandbLogger:
         else:
             self._wandb.log({key_name: self._wandb.Image(image_array, caption=caption)}, commit=commit)
 
+    def log_audio(self, key_name, image_array, caption=None, commit=True):
+        """
+        Log audio array onto W&B.
+
+        key_name: name of the key
+        image_array: numpy array of image.
+        """
+        if caption is None:
+            self._wandb.log({key_name: self._wandb.Audio(image_array, sample_rate=22050)}, commit=commit)
+        else:
+            self._wandb.log({f"{key_name}: {caption}": self._wandb.Audio(image_array, sample_rate=22050, caption=caption)}, commit=commit)
+
     def log_images(self, key_name, list_images, commit=True):
         """
         Log list of image array onto W&B
