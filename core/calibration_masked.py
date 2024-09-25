@@ -8,7 +8,15 @@ def fraction_missed_loss(lower_bound, upper_bound, ground_truth, masks, only_avg
     misses = (lower_bound > ground_truth).float() + (upper_bound < ground_truth).float()
     misses[misses > 1.0] = 1.0
     if only_avg_masked:
-        if len(misses.shape) == 3:
+        if len(misses.shape) == 1:
+            mask_indices = torch.argwhere(masks.squeeze() == 1.)
+            unmasked_misses = misses[mask_indices[:, 0]]
+            return unmasked_misses.mean()
+        if len(misses.shape) == 2:
+            mask_indices = torch.argwhere(masks.squeeze() == 1.)
+            unmasked_misses = misses[mask_indices[:, 0], mask_indices[:, 1]]
+            return unmasked_misses.mean()
+        elif len(misses.shape) == 3:
             mask_indices = torch.argwhere(masks == 1.)
             unmasked_misses = misses[mask_indices[:, 0], mask_indices[:, 1], mask_indices[:, 2]]
             return unmasked_misses.mean()
@@ -16,6 +24,7 @@ def fraction_missed_loss(lower_bound, upper_bound, ground_truth, masks, only_avg
             mask_indices = torch.argwhere(masks == 1.)
             unmasked_misses = misses[mask_indices[:,0], mask_indices[:,1], mask_indices[:,2], mask_indices[:,3]]
             return unmasked_misses.mean(), unmasked_misses
+
         else:
             raise NotImplementedError('fraction_missed_loss does not support this shape')
     if avg_channels:
@@ -25,7 +34,11 @@ def fraction_missed_loss(lower_bound, upper_bound, ground_truth, masks, only_avg
 
 
 def get_rcps_losses_from_outputs(cal_l, cal_u, ground_truth, lam, masks):
-    risk,_ = fraction_missed_loss(cal_l / lam, cal_u * lam, ground_truth, masks, only_avg_masked=True)
+    if len(cal_l.shape) == 2:
+        risk = fraction_missed_loss(cal_l / lam, cal_u * lam, ground_truth, masks, only_avg_masked=True)
+    else:
+        risk, _ = fraction_missed_loss(cal_l / lam, cal_u * lam, ground_truth, masks, only_avg_masked=True)
+
     return risk
 
 
