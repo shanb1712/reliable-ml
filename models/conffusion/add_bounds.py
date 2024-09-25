@@ -56,8 +56,21 @@ class Conffusion(nn.Module):
         return loss
 
     def quantile_regression_loss_fn(self, pred_l, pred_u, gt_hr):
-        lower_loss = self.q_lo_loss(pred_l, gt_hr)
-        upper_loss = self.q_hi_loss(pred_u, gt_hr)
+        # Step 1: Calculate the amplitude-based loss (quantile loss based on magnitudes)
+        # Use absolute values for the amplitude comparison
+        lower_loss_amplitude = self.q_lo_loss(torch.abs(pred_l), torch.abs(gt_hr))
+        upper_loss_amplitude = self.q_hi_loss(torch.abs(pred_u), torch.abs(gt_hr))
+        
+        # Step 2: Calculate the phase-based loss (ensure the sign matches the ground truth)
+        # Phase loss is the difference in signs between prediction and ground truth
+        lower_loss_phase = torch.mean(torch.abs(torch.sign(pred_l) - torch.sign(gt_hr)))
+        upper_loss_phase = torch.mean(torch.abs(torch.sign(pred_u) - torch.sign(gt_hr)))
+
+        # Step 3: Combine amplitude and phase losses
+        lower_loss = lower_loss_amplitude + lower_loss_phase
+        upper_loss = upper_loss_amplitude + upper_loss_phase
+
+        # Step 4: Total loss
         loss = lower_loss + upper_loss
         return loss
 

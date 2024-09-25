@@ -59,7 +59,7 @@ def run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, v
             val_pred_upper_bound = val_pred_upper_bound.unsqueeze(1)
 
             if opt['train']['finetune_loss'] == 'quantile_regression':
-                val_bounds_loss = diffusion_with_bounds.quantile_regression_loss_fn(torch.abs(val_pred_lower_bound), torch.abs(val_pred_upper_bound), torch.abs(val_gt_image))
+                val_bounds_loss = diffusion_with_bounds.quantile_regression_loss_fn(val_pred_lower_bound, val_pred_upper_bound, val_gt_image)
             else:
                 val_sampled_l_bound = val_data["lower_bound"].to(device)
                 val_sampled_u_bound = val_data["upper_bound"].to(device)
@@ -146,9 +146,12 @@ def run_training(opt, diffusion_with_bounds, wandb_logger, device, optimizer, tr
                 mask = train_data["mask"].to(device)
 
             gt_image = train_data["gt_image"].to(device)
-            noise_level = (opt["var"]) * torch.rand_like(gt_image)
+            noise_level = (opt["var"]/2) * (torch.rand_like(gt_image) * 2 - 1)  # Noise between [-var/2, var/2]
             # cond_image = masked_image + noise_level
             cond_image = gt_image + noise_level
+
+            # Clamp the noisy input to ensure values stay within [-1, 1]
+            cond_image = torch.clamp(cond_image, -1.0, 1.0)
 
             pred_lower_bound, pred_upper_bound = diffusion_with_bounds(cond_image, mask, gt_image)
             # pred_lower_bound = (torch.zeros_like(masked_image) * (1. - mask) + mask * pred_lower_bound)
@@ -160,7 +163,7 @@ def run_training(opt, diffusion_with_bounds, wandb_logger, device, optimizer, tr
             pred_upper_bound = pred_upper_bound.unsqueeze(1)
 
             if opt['train']['finetune_loss'] == 'quantile_regression':
-                bounds_loss = diffusion_with_bounds.quantile_regression_loss_fn(torch.abs(pred_lower_bound), torch.abs(pred_upper_bound), torch.abs(gt_image))
+                bounds_loss = diffusion_with_bounds.quantile_regression_loss_fn(pred_lower_bound, pred_upper_bound, gt_image)
             else:
                 sampled_l_bound = train_data["lower_bound"].to(device)
                 sampled_u_bound = train_data["upper_bound"].to(device)
