@@ -46,7 +46,7 @@ def run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, v
 
             noise_level = (opt["var"]) * torch.rand_like(val_masked_image)
 
-            val_masked_image = val_masked_image + noise_level
+            val_masked_image = val_gt_image + noise_level
 
             val_pred_lower_bound, val_pred_upper_bound = diffusion_with_bounds(val_masked_image, val_mask, val_gt_image)
 
