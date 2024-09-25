@@ -28,14 +28,15 @@
             "dataloader":{
                 "validation_split": 2, // percent or number 
                 "args":{ // arguments to initialize train_dataloader
-                    "batch_size": 3, // batch size in each gpu
+                    "batch_size": 1, // batch size in each gpu
                     "num_workers": 4,
                     "shuffle": true,
                     "pin_memory": true,
                     "drop_last": true
                 },
                 "val_args":{ // arguments to initialize valid_dataloader, will overwrite the parameters in train_dataloader
-                    "batch_size": 1, // batch size in each gpu
+                    "batch_size": 1,
+                    // batch size in each gpu
                     "num_workers": 4,
                     "shuffle": false,
                     "pin_memory": true,
@@ -57,7 +58,7 @@
                     "mask_config": {
                         "mask_mode": "long",
                         "long": {
-                            "gap_length": 500, // in ms
+                            "gap_length": 100, // in ms
                             "start_gap_idx": "none"  //in ms, None means at the middle
                         },
                         "short": {
@@ -92,7 +93,7 @@
                     "mask_config": {
                         "mask_mode": "long",
                         "long": {
-                            "gap_length": 500, // in ms
+                            "gap_length": 100, // in ms
                             "start_gap_idx": "none"  //in ms, None means at the middle
                         },
                         "short": {
@@ -127,7 +128,7 @@
                     "mask_config": {
                         "mask_mode": "long",
                         "long": {
-                            "gap_length": 500, // in ms
+                            "gap_length": 100, // in ms
                             "start_gap_idx": "none"  //in ms, None means at the middle
                         },
                         "short": {

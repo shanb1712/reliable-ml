@@ -64,6 +64,4 @@ attention_dict:
     Nproj: 8
     #the number of channels is the same as the Ns of the corresponding layer
 
-
-
-
+finetune_bounds: True
