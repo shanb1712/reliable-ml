@@ -696,7 +696,6 @@ class Unet_CQT_oct_with_attention(nn.Module):
 
 
         #self.pyr_up_proj_first=nn.Conv2d(dim_out, 2, (5,3), padding="same", padding_mode="zeros", bias=False)
-        
         for i in range(self.num_octs-1,-1,-1):
 
             if i==0:
@@ -714,7 +713,22 @@ class Unet_CQT_oct_with_attention(nn.Module):
             else:
                 attn_dict=None
 
-            self.ups.append(nn.ModuleList(
+            if i==0:
+                # Add two paths: one for lower bounds and one for upper bounds
+                self.ups.append(nn.ModuleList([
+                    nn.ModuleList([
+                        ResnetBlock(dim_out, 2, use_norm=self.use_norm, num_dils=1, bias=False, kernel_size=(1,1), proj_place="after", emb_dim=self.emb_dim, init=init, init_zero=init_zero),
+                        ResnetBlock(dim_in, dim_out, use_norm=self.use_norm, num_dils=self.num_dils[i], bias=False, emb_dim=self.emb_dim, init=init, init_zero=init_zero, Fdim=(i+1)*self.bins_per_oct, attention_dict=attn_dict),
+                    ]),
+                    nn.ModuleList([
+                        ResnetBlock(dim_out, 2, use_norm=self.use_norm, num_dils=1, bias=False, kernel_size=(1,1), proj_place="after", emb_dim=self.emb_dim, init=init, init_zero=init_zero),
+                        ResnetBlock(dim_in, dim_out, use_norm=self.use_norm, num_dils=self.num_dils[i], bias=False, emb_dim=self.emb_dim, init=init, init_zero=init_zero, Fdim=(i+1)*self.bins_per_oct, attention_dict=attn_dict),
+        
+                    ])
+
+                ]))
+            else:
+                self.ups.append(nn.ModuleList(
                                         [
                                         ResnetBlock(dim_out, 2, use_norm=self.use_norm,num_dils= 1,bias=False, kernel_size=(1,1), proj_place="after", emb_dim=self.emb_dim, init=init, init_zero=init_zero),
                                         ResnetBlock(dim_in, dim_out, use_norm=self.use_norm,num_dils= self.num_dils[i],attention_dict=attn_dict, bias=False, emb_dim=self.emb_dim, init=init, init_zero=init_zero, Fdim=(i+1)*self.bins_per_oct),
@@ -724,24 +738,24 @@ class Unet_CQT_oct_with_attention(nn.Module):
 
         #self.cropconcat = CropConcatBlock()
 
-        if True: #TODO: Add the finetune_bounds condition here from args
-            print("Initializing outer and upper bounds layers")
-            # Two final layers for the 2D time-frequency representation
-            self.final_lower = nn.Sequential(
-                nn.Conv2d(1, 1, kernel_size=3, bias=False, padding=1),  # 1x1 conv to keep the dimensions the same
-                nn.BatchNorm2d(1),  # BatchNorm for normalization
-                nn.ReLU(inplace=True)  # Non-linearity to introduce variation between the outputs
-            )
+        # if True: #TODO: Add the finetune_bounds condition here from args
+        #     print("Initializing outer and upper bounds layers")
+        #     # Two final layers for the 2D time-frequency representation
+        #     self.final_lower = nn.Sequential(
+        #         nn.Conv2d(1, 1, kernel_size=3, bias=False, padding=1),  # 1x1 conv to keep the dimensions the same
+        #         nn.BatchNorm2d(1),  # BatchNorm for normalization
+        #         nn.ReLU(inplace=True)  # Non-linearity to introduce variation between the outputs
+        #     )
 
-            self.final_upper = nn.Sequential(
-                nn.Conv2d(1, 1, kernel_size=3, bias=False, padding=1),  # 1x1 conv to keep the dimensions the same
-                nn.BatchNorm2d(1),  # BatchNorm for normalization
-                nn.ReLU(inplace=True)  # Non-linearity to introduce variation between the outputs
-            )
+        #     self.final_upper = nn.Sequential(
+        #         nn.Conv2d(1, 1, kernel_size=3, bias=False, padding=1),  # 1x1 conv to keep the dimensions the same
+        #         nn.BatchNorm2d(1),  # BatchNorm for normalization
+        #         nn.ReLU(inplace=True)  # Non-linearity to introduce variation between the outputs
+        #     )
 
-            # Initialize weights of final_lower and final_upper
-            nn.init.kaiming_uniform_(self.final_lower[0].weight, nonlinearity='relu')
-            nn.init.kaiming_uniform_(self.final_upper[0].weight, nonlinearity='relu')
+        #     # Initialize weights of final_lower and final_upper
+        #     nn.init.kaiming_uniform_(self.final_lower[0].weight, nonlinearity='relu')
+        #     nn.init.kaiming_uniform_(self.final_upper[0].weight, nonlinearity='relu')
 
 
 
@@ -760,6 +774,10 @@ class Unet_CQT_oct_with_attention(nn.Module):
         #apply CQT to the inputs
         X_list =self.CQTransform.fwd(inputs.unsqueeze(1))
         X_list_out=X_list
+
+
+        x_list_out_lower = []
+        x_list_out_upper = []
 
         hs=[]
         for i,modules in enumerate(self.downs):
@@ -824,68 +842,71 @@ class Unet_CQT_oct_with_attention(nn.Module):
 
         for i,modules in enumerate(self.ups):
             j=len(self.ups) -i-1
-            #print("upsampler", j)
 
-            OutBlock,  ResBlock=modules
+            if j==0 and out_upper_lower:
+                hs_lower = hs.copy()
+                hs_upper = hs.copy()
+                x_list_out_lower = X_list_out.copy()
+                x_list_out_upper = X_list_out.copy()
 
-            skip=hs.pop()
-            X=torch.cat((X,skip),dim=1)
-            X=ResBlock(X, sigma)
-            
-            Xout=(Xout+OutBlock(X,sigma))/(2**0.5)
+                lower_modules, upper_modules = modules
 
+                # Process lower path
+                lower_out_block, lower_res_block = lower_modules
+                lower_skip = hs_lower.pop()
+                lower_X = torch.cat((X, lower_skip), dim=1)
+                lower_X = lower_res_block(lower_X, sigma)
+                lower_Xout = (Xout+lower_out_block(lower_X,sigma))/(2**0.5)
 
-            if j<=(self.num_octs-1):
-                X= X[:,:,self.bins_per_oct::,:]
-                Out, Xout= Xout[:,:,0:self.bins_per_oct,:], Xout[:,:,self.bins_per_oct::,:]
-                #pyr_out, pyr= pyr[:,:,0:self.bins_per_oct,:], pyr[:,:,self.bins_per_oct::,:]
-                #X_out=(pyr_up_proj(X_out)+pyr_out)/(2**0.5)
+                # Process upper path
+                upper_out_block, upper_res_block = upper_modules
+                upper_skip = hs_upper.pop()  # This skip connection might be the same as for lower, depending on architecture
+                upper_X = torch.cat((X, upper_skip), dim=1)
+                upper_X = upper_res_block(upper_X, sigma)
+                upper_Xout = (Xout+upper_out_block(upper_X,sigma))/(2**0.5)
 
-                Out=Out.permute(0,2,3,1).contiguous() #call contiguous() here?
-                Out=torch.view_as_complex(Out)
+                lower_X = lower_X[:,:,self.bins_per_oct::,:]
+                lower_Out, lower_Xout= lower_Xout[:,:,0:self.bins_per_oct,:], lower_Xout[:,:,self.bins_per_oct::,:]
+                lower_Out=lower_Out.permute(0,2,3,1).contiguous() 
+                lower_Out=torch.view_as_complex(lower_Out)
+                x_list_out_lower[i]=lower_Out.unsqueeze(1)
 
-                #save output
-                X_list_out[i]=Out.unsqueeze(1)
+                upper_X = upper_X[:,:,self.bins_per_oct::,:]
+                upper_Out, upper_Xout= upper_Xout[:,:,0:self.bins_per_oct,:], upper_Xout[:,:,self.bins_per_oct::,:]
+                upper_Out=upper_Out.permute(0,2,3,1).contiguous() 
+                upper_Out=torch.view_as_complex(upper_Out)
+                x_list_out_upper[i]=upper_Out.unsqueeze(1)
 
-            elif j>(self.num_octs-1):
-                print("We should not be here")
-                pass
+            else:
+                OutBlock,  ResBlock=modules
 
-            if j>0 and j<=(self.num_octs-1):
-                #pyr=self.upsampler(pyr) #call contiguous() here?
-                X=self.upsamplerT(X) #call contiguous() here?
-                Xout=self.upsamplerT(Xout) #call contiguous() here?
+                skip=hs.pop()
+                X=torch.cat((X,skip),dim=1)
+                X=ResBlock(X, sigma)
+                
+                Xout=(Xout+OutBlock(X,sigma))/(2**0.5)
+
+                if j<=(self.num_octs-1):
+                    X= X[:,:,self.bins_per_oct::,:]
+                    Out, Xout= Xout[:,:,0:self.bins_per_oct,:], Xout[:,:,self.bins_per_oct::,:]
+                    Out=Out.permute(0,2,3,1).contiguous() 
+                    Out=torch.view_as_complex(Out)
+                    X_list_out[i]=Out.unsqueeze(1)
+
+                elif j>(self.num_octs-1):
+                    print("We should not be here")
+                    pass
+
+                if j>0 and j<=(self.num_octs-1):
+                    #pyr=self.upsampler(pyr) #call contiguous() here?
+                    X=self.upsamplerT(X) #call contiguous() here?
+                    Xout=self.upsamplerT(Xout) #call contiguous() here?
 
         # Apply the final lower and upper layers if requested
         if out_upper_lower:
-            # Apply the lower and upper bound heads to each octave
-            pred_lower_list = []
-            pred_upper_list = []
-            for octave_output in X_list_out:
-                # Convert complex-valued data to real by splitting into real and imaginary parts
-                real_input = torch.view_as_real(octave_output)  # Shape (B, 1, 64, 32, 2), where the last dim has real and imag parts
-
-                # Split into real and imaginary parts for processing (remove the last dimension)
-                real_part = real_input[..., 0]  # Shape (B, 1, 64, 32), real part
-                imag_part = real_input[..., 1]  # Shape (B, 1, 64, 32), imaginary part
-
-                # Process real and imaginary parts separately
-                real_lower = self.final_lower(real_part)  # Now 4D tensor (B, 1, 64, 32)
-                imag_lower = self.final_lower(imag_part)  # Now 4D tensor (B, 1, 64, 32)
-                real_upper = self.final_upper(real_part)  # Now 4D tensor (B, 1, 64, 32)
-                imag_upper = self.final_upper(imag_part)  # Now 4D tensor (B, 1, 64, 32)
-
-                # Recombine real and imaginary parts into complex tensors
-                pred_lower = torch.view_as_complex(torch.stack([real_lower, imag_lower], dim=-1))  # Combine to complex
-                pred_upper = torch.view_as_complex(torch.stack([real_upper, imag_upper], dim=-1))  # Combine to complex
-
-                # Add to the lists
-                pred_lower_list.append(pred_lower)  # Add octave result to list
-                pred_upper_list.append(pred_upper)  # Add octave result to list
-
             # Convert both outputs back from time-frequency representation to time domain
-            pred_time_lower = self.CQTransform.bwd(pred_lower_list)  # Inverse CQT for lower bound
-            pred_time_upper = self.CQTransform.bwd(pred_upper_list)  # Inverse CQT for upper bound
+            pred_time_lower = self.CQTransform.bwd(x_list_out_lower)  # Inverse CQT for lower bound
+            pred_time_upper = self.CQTransform.bwd(x_list_out_upper)  # Inverse CQT for upper bound
 
             pred_time_lower = pred_time_lower.squeeze(1)
             pred_time_upper = pred_time_upper.squeeze(1)

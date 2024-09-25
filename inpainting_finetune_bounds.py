@@ -59,7 +59,7 @@ def run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, v
             val_pred_upper_bound = val_pred_upper_bound.unsqueeze(1)
 
             if opt['train']['finetune_loss'] == 'quantile_regression':
-                val_bounds_loss = diffusion_with_bounds.quantile_regression_loss_fn(val_pred_lower_bound, val_pred_upper_bound, val_gt_image)
+                val_bounds_loss = diffusion_with_bounds.quantile_regression_loss_fn(torch.abs(val_pred_lower_bound), torch.abs(val_pred_upper_bound), torch.abs(val_gt_image))
             else:
                 val_sampled_l_bound = val_data["lower_bound"].to(device)
                 val_sampled_u_bound = val_data["upper_bound"].to(device)
@@ -160,7 +160,7 @@ def run_training(opt, diffusion_with_bounds, wandb_logger, device, optimizer, tr
             pred_upper_bound = pred_upper_bound.unsqueeze(1)
 
             if opt['train']['finetune_loss'] == 'quantile_regression':
-                bounds_loss = diffusion_with_bounds.quantile_regression_loss_fn(pred_lower_bound, pred_upper_bound, gt_image)
+                bounds_loss = diffusion_with_bounds.quantile_regression_loss_fn(torch.abs(pred_lower_bound), torch.abs(pred_upper_bound), torch.abs(gt_image))
             else:
                 sampled_l_bound = train_data["lower_bound"].to(device)
                 sampled_u_bound = train_data["upper_bound"].to(device)
