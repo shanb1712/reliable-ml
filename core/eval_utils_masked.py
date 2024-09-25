@@ -8,8 +8,9 @@ def get_rcps_metrics(lower_bound, upper_bound, ground_truth, masks):
   sizes = []
   for idx in range(upper_bound.shape[0]):
     risks_losses = risks_losses + [fraction_missed_loss(lower_bound[idx], upper_bound[idx], ground_truth[idx],masks[idx],only_avg_masked=True, avg_channels=False).unsqueeze(dim=0),]
-    mask_indices = torch.argwhere(masks[idx] == 1.)
-    sizes = sizes + [(upper_bound[idx] - lower_bound[idx])[mask_indices[:, 0], mask_indices[:, 1], mask_indices[:, 2]].mean().unsqueeze(dim=0), ]
+    mask_indices = torch.argwhere(masks[idx].squeeze() == 1.)
+    if mask_indices.shape[1] == 1:
+      sizes = sizes + [(upper_bound[idx] - lower_bound[idx])[mask_indices[:, 0]].mean().unsqueeze(dim=0), ]
 
 
   risks_losses = torch.cat(risks_losses, dim=0)
