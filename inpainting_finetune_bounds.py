@@ -35,8 +35,6 @@ def run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, v
 
         for val_idx, val_data in enumerate(val_loader):
 
-            val_gt_image = val_data["gt_image"].to(device)
-
             if opt['train']['finetune_loss'] == 'quantile_regression':
                 val_masked_image = val_data["cond_image"].to(device)
                 val_mask = val_data["mask"].to(device)
@@ -44,17 +42,13 @@ def run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, v
                 val_masked_image = val_data["masked_samples"].to(device)
                 val_mask = val_data["sampled_masks"].to(device)
 
-            noise_level = (opt["var"]) * torch.rand_like(val_masked_image)
+            val_gt_image = val_data["gt_image"].to(device)
 
-            # val_masked_image = val_masked_image + noise_level
+            noise_level = (opt["var"] / 2) * (torch.rand_like(val_gt_image)* 2 - 1)
             val_masked_image = val_gt_image + noise_level
+            val_masked_image = torch.clamp(val_masked_image, -1.0, 1.0)
 
             val_pred_lower_bound, val_pred_upper_bound = diffusion_with_bounds(val_masked_image, val_mask, val_gt_image)
-
-            # val_pred_lower_bound = (torch.zeros_like(val_masked_image) * (1. - val_mask) + val_mask * val_pred_lower_bound)
-            # val_pred_upper_bound = (torch.zeros_like(val_masked_image) * (1. - val_mask) + val_mask * val_pred_upper_bound)
-            # partial_gt = (torch.zeros_like(val_masked_image) * (1. - val_mask) + val_mask * val_gt_image)
-
             val_pred_lower_bound = val_pred_lower_bound.unsqueeze(1)
             val_pred_upper_bound = val_pred_upper_bound.unsqueeze(1)
 
@@ -103,6 +97,12 @@ def run_validation(opt, diffusion_with_bounds, wandb_logger, device, val_step, v
             #                                all_val_gt_samples.detach().cpu() * 2 - 1)
             # wandb_logger.log_image("Validation/Images", image_grid, caption="Pred L, Pred U, GT, Masked Input, Full GT", commit=False)
 
+            audio_grid = vis_util.create_audio_grid(pred_val_calibrated_l.detach().cpu() * 2 - 1,
+                                           pred_val_calibrated_u.detach().cpu() * 2 - 1,
+                                           all_val_masked_samples.detach().cpu() * 2 - 1,
+                                           all_val_gt_samples.detach().cpu() * 2 - 1)
+            vis_util.log_audio_grid_as_list(wandb_logger._wandb, audio_grid, sample_rate=22050)
+
             wandb_logger.log_metrics({'Validation/Calibrated Pred Risk': calibrated_pred_risks_losses, 'Validation/val_step': val_step}, commit=False)
             wandb_logger.log_metrics({'Validation/Calibrated Pred Size Mean': calibrated_pred_sizes_mean, 'Validation/val_step': val_step}, commit=False)
             wandb_logger.log_metrics({'Validation/Calibrated Pred Size Median': calibrated_pred_sizes_median, 'Validation/val_step': val_step}, commit=False)
@@ -146,22 +146,16 @@ def run_training(opt, diffusion_with_bounds, wandb_logger, device, optimizer, tr
                 mask = train_data["mask"].to(device)
 
             gt_image = train_data["gt_image"].to(device)
-            noise_level = (opt["var"]/2) * (torch.rand_like(gt_image) * 2 - 1)  # Noise between [-var/2, var/2]
-            # cond_image = masked_image + noise_level
-            cond_image = gt_image + noise_level
 
-            # Clamp the noisy input to ensure values stay within [-1, 1]
+            noise_level = (opt["var"]/2) * (torch.rand_like(gt_image) * 2 - 1)  # Noise between [-var/2, var/2]
+            cond_image = gt_image + noise_level
             cond_image = torch.clamp(cond_image, -1.0, 1.0)
 
-            pred_lower_bound, pred_upper_bound = diffusion_with_bounds(cond_image, mask, gt_image)
-            # pred_lower_bound = (torch.zeros_like(masked_image) * (1. - mask) + mask * pred_lower_bound)
-            # pred_upper_bound = (torch.zeros_like(masked_image) * (1. - mask) + mask * pred_upper_bound)
-            # partial_gt = (torch.zeros_like(gt_image) * (1. - mask) + mask * gt_image)
-            optimizer.zero_grad()
-
+            pred_lower_bound, pred_upper_bound = diffusion_with_bounds(cond_image)
             pred_lower_bound = pred_lower_bound.unsqueeze(1)
             pred_upper_bound = pred_upper_bound.unsqueeze(1)
 
+            optimizer.zero_grad()
             if opt['train']['finetune_loss'] == 'quantile_regression':
                 bounds_loss = diffusion_with_bounds.quantile_regression_loss_fn(pred_lower_bound, pred_upper_bound, gt_image)
             else:

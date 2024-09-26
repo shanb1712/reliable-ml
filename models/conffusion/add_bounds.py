@@ -28,11 +28,9 @@ class Conffusion(nn.Module):
         if load_finetuned:
             self.load_finetuned_network()
 
-    def forward(self, masked_images, mask, gt_image, sigma=None):
+    def forward(self, masked_images, mask=None, gt_image=None, sigma=None):
         if 'audio' in self.baseModel.__name__.lower():
-            gt_image, mask, masked_images = [torch.squeeze(data.type(torch.float32), 1) for
-                                             data in
-                                             [gt_image, mask, masked_images]]
+            masked_images = torch.squeeze(masked_images.type(torch.float32), 1)
 
         t = self.baseModel.diff_params.create_schedule(self.baseModel.num_timesteps).to(masked_images.device)
 

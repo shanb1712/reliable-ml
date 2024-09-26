@@ -45,6 +45,32 @@ def create_audio_row(pred_l, pred_u, masked_input, gt_sample):
 
     return audio_clips
 
+def create_audio_grid(pred_l, pred_u, masked_input, gt_sample):
+    audio_rows = []
+    
+    for i in range(len(pred_l)):
+        # Create a row of audio clips
+        audio_row = create_audio_row(pred_l[i], pred_u[i], masked_input[i], gt_sample[i])
+        audio_rows.append(audio_row)
+
+    return audio_rows
+
+def log_audio_grid_as_list(wandb_logger, audio_rows, sample_rate=22050):
+    try:
+        audio_log = []
+        captions = []
+        
+        # Prepare a list of audio clips and their captions
+        for idx, audio_row in enumerate(audio_rows):
+            for audio_clip, caption in audio_row:
+                audio_log.append(wandb_logger.Audio(audio_clip, sample_rate=sample_rate, caption=f"Row {idx+1}: " + caption))
+                
+        # Log all the audio clips as a single grouped entry under "Validation/Audio"
+        wandb_logger.log({
+            "Validation/Audio": audio_log
+        })
+    except Exception as e:
+        print(f"Error while logging audio grid: {e}")
 
 def log_train(diffusion_with_bounds, wandb_logger, pred_l, pred_u, cond_image, gt_image):
     logs = diffusion_with_bounds.get_current_log()
