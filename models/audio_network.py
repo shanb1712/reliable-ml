@@ -156,7 +156,7 @@ class Audio_Network(BaseNetwork):
             new_state_dict_network = OrderedDict()
             new_state_dict_ema = OrderedDict()
             for k, v in state_dict['network'].items():
-                if 'ups' in k:
+                if 'ups.' in k:
                     name_upper = k.replace("ups", "ups_upper")
                     name_lower = k.replace("ups", "ups_lower")
                     new_state_dict_network[name_upper] = v
