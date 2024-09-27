@@ -16,7 +16,7 @@ from models.conffusion.add_bounds import Conffusion
 from torch.utils.data import DataLoader
 
 
-def run_test(diffusion_with_bounds, wandb_logger, device, test_step, test_loader):
+def run_test(diffusion_with_bounds, wandb_logger, device, test_step, test_loader, opt):
     with torch.no_grad():
         test_batch_size = test_loader.batch_size
         dataset_len = len(test_loader.dataset)
@@ -168,7 +168,7 @@ def main_worker(gpu, opt):
 
 
     diffusion_with_bounds.eval()
-    run_test(diffusion_with_bounds, wandb_logger, device, test_step, test_loader)
+    run_test(diffusion_with_bounds, wandb_logger, device, test_step, test_loader, opt)
     # endregion
 
 
@@ -189,6 +189,7 @@ if __name__ == '__main__':
     parser.add_argument('--prediction_time_step', type=int, default=155)
     parser.add_argument('--wandb_run_name', type=str, default=None)
     parser.add_argument('--lr', type=float, default=1e-5)
+    parser.add_argument('--var', type=float, default=0.005)
 
     args = parser.parse_args()
     opt = Praser.parse(args)
@@ -197,4 +198,5 @@ if __name__ == '__main__':
     os.environ['CUDA_VISIBLE_DEVICES'] = gpu_str
 
     opt['world_size'] = 1
+    opt['var'] = args.var
     main_worker(0, opt)

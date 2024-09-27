@@ -76,6 +76,46 @@ class Conffusion(nn.Module):
         return self.log_dict
 
 
+    def save_network(self, epoch, iter_step, optimizer, pred_lambda_hat, wandb_logger, network_name):
+        """
+        Save the network and optimizer state with a custom name.
+
+        Args:
+            epoch (int): Current epoch number.
+            iter_step (int): Current iteration step.
+            optimizer (torch.optim.Optimizer): The optimizer used for training.
+            pred_lambda_hat (torch.Tensor): Model prediction.
+            wandb_logger (wandb.Logger): Wandb logger for logging the model.
+            network_name (str): The name of the network being saved (used for filenames).
+        """
+        
+        # Define paths for generator (model) and optimizer checkpoints with a custom name
+        gen_path = os.path.join(self.opt['path']['checkpoint'], f'{network_name}_gen.pth')
+        opt_path = os.path.join(self.opt['path']['checkpoint'], f'{network_name}_opt.pth')
+        
+        # Save generator (model) state_dict
+        state_dict = self.state_dict()
+        for key, param in state_dict.items():
+            state_dict[key] = param.cpu()
+        torch.save(state_dict, gen_path)
+        
+        # Save optimizer state
+        opt_state = {
+            'epoch': epoch,
+            'iter': iter_step,
+            'pred_lambda_hat': pred_lambda_hat,
+            'scheduler': None,  # Include scheduler state if applicable
+            'optimizer': optimizer.state_dict()
+        }
+        torch.save(opt_state, opt_path)
+        
+        # Log to wandb
+        wandb_logger.save(gen_path)
+        wandb_logger.save(opt_path)
+
+        # Optionally log additional info like metrics
+        wandb_logger.log({"epoch": epoch, "iteration": iter_step, "model_saved_as": network_name})
+
     def save_best_network(self, epoch, iter_step, optimizer, pred_lambda_hat, wandb_logger):
         # Define paths for generator and optimizer checkpoints
         gen_path = os.path.join(self.opt['path']['checkpoint'], 'best_network_gen.pth'.format(iter_step, epoch))
