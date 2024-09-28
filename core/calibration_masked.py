@@ -5,7 +5,7 @@ from core.bounds import HB_mu_plus
 
 
 def fraction_missed_loss(lower_bound, upper_bound, ground_truth, masks, only_avg_masked=True, avg_channels=True):
-    misses = (torch.abs(lower_bound) > torch.abs(ground_truth)).float() + (torch.abs(upper_bound) < torch.abs(ground_truth)).float()
+    misses = (lower_bound > ground_truth).float() + (upper_bound < ground_truth).float()
     misses[misses > 1.0] = 1.0
     if only_avg_masked:
         if len(misses.shape) == 2:
