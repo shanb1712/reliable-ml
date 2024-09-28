@@ -127,7 +127,7 @@ def run_test(diffusion_with_bounds, wandb_logger, device, test_step, test_loader
             image_series = [wandb_logger._wandb.Image(img, caption=filename) for img, filename in zip(images, filenames)]
             wandb_logger._wandb.log({'Image Series':image_series})
 
-            wandb_logger.log_metrics({'Images/Mean overlap': mean_overlap, 'Test/Median overlap': median_overlap}, commit=True)
+            wandb_logger.log_metrics({'Test/Mean overlap': mean_overlap, 'Test/Median overlap': median_overlap}, commit=True)
             
             audio_grid = vis_util.create_audio_grid(pred_test_calibrated_l.detach().cpu() * 2 - 1,
                                            pred_test_calibrated_u.detach().cpu() * 2 - 1,
