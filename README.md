@@ -60,8 +60,6 @@ python3 test_finetuned_bounds.py
 Update the `resume_state` under `path` in the `test_finetune_bounds_inpainting_center_nconffusion.json` to the path of the finetuned model under `experiment/<wandb-project-name>/checkpoint/best_model`
 and `gap_length` to test the desired length of generated data to test.
 
-## Results
-
 ## Citation
 
 - **Horwitz, Eliahu and Hoshen, Yedid. (2022).** Conffusion: Confidence Intervals for Diffusion Models. *arXiv preprint arXiv:2211.09795*. Available at: [https://arxiv.org/abs/2211.09795](https://arxiv.org/abs/2211.09795)
