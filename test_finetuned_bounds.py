@@ -202,6 +202,7 @@ def main_worker(gpu, opt):
         worker_init_fn = partial(Util.set_seed, gl_seed=opt['seed'])
         dataloader_args = dataset_opt['dataloader']['args']
         if phase == 'test':
+            print('Loading test dataloader...')
             test_set = init_obj(dataset_opt['which_dataset'], phase_logger, default_file_name='data.dataset', init_type='Dataset')
             test_loader = DataLoader(test_set, sampler=data_sampler, worker_init_fn=worker_init_fn, **dataloader_args)
     # endregion
@@ -246,7 +247,7 @@ if __name__ == '__main__':
     opt = Praser.parse(args)
 
     gpu_str = ','.join(str(x) for x in opt['gpu_ids'])
-    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+    os.environ['CUDA_VISIBLE_DEVICES'] = gpu_str
 
     opt['world_size'] = 1
     opt['var'] = args.var
