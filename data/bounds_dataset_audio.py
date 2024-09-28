@@ -91,7 +91,8 @@ class InpaintDataset(data.Dataset):
     def __getitem__(self, index):
         ret = {}
         original = torch.from_numpy(self.test_samples[index])[None, :]
-        mask = 1. - self.get_mask()
+        mask = 1. - torch.from_numpy(1-np.ones((1, self.audio_len)))
+        mask_gap = 1. - self.get_mask()
         generated = torch.load(self.gen_samples[index], map_location=mask.device).type(torch.float64)
 
         seg = resample_audio(original, torch.from_numpy(np.array(self.f_s[index])), self.sample_rate, self.audio_len)
@@ -105,6 +106,7 @@ class InpaintDataset(data.Dataset):
         ret['gen_image'] = generated
         ret['cond_image'] = cond_audio
         ret['mask_image'] = mask_audio
+        ret['mask_audio'] = mask_gap
         ret['mask'] = mask
         ret['path'] = self.audios[index].rsplit("/")[-1].rsplit("\\")[-1]
 
@@ -135,28 +137,28 @@ class InpaintDataset(data.Dataset):
 
     def get_mask(self):
         mask = np.ones((1, self.audio_len))  # assume between 5 and 6s of total length
-        # if self.mask_mode == 'long':
-        #     gap = int(self.mask_config[self.mask_mode]['gap_length'] * self.sample_rate / 1000)
-        #     if self.mask_config[self.mask_mode]['start_gap_idx'] == "none":
-        #         start_gap_index = int(self.audio_len // 2 - gap // 2)
-        #     else:
-        #         start_gap_index = int(self.mask_config[self.mask_mode]['start_gap_idx'] * self.sample_rate / 1000)
-        #     mask[..., start_gap_index:(start_gap_index + gap)] = 0
-        # elif self.mask_mode == 'short':
-        #     num_gaps = int(self.mask_config[self.mask_mode]['num_gaps'])
-        #     gap_len = int(self.mask_config[self.mask_mode]['gap_length'] * self.sample_rate / 1000)
-        #     if self.mask_config[self.mask_mode]['start_gap_idx'] == "none":
-        #         start_gap_index = torch.randint(0, self.audio_len - gap_len, (num_gaps,))
-        #         for i in range(num_gaps):
-        #             mask[..., start_gap_index[i]:(start_gap_index[i] + gap_len)] = 0
-        #     else:
-        #         start_gap_index = int(self.mask_config[self.mask_mode]['start_gap_idx'] * self.sample_rate / 1000)
-        #     mask[..., start_gap_index:(start_gap_index + gap)] = 0
-        # elif self.mask_mode == 'file':
-        #     pass
-        # else:
-        #     raise NotImplementedError(
-        #         f'Mask mode {self.mask_mode} has not been implemented.')
+        if self.mask_mode == 'long':
+            gap = int(self.mask_config[self.mask_mode]['gap_length'] * self.sample_rate / 1000)
+            if self.mask_config[self.mask_mode]['start_gap_idx'] == "none":
+                start_gap_index = int(self.audio_len // 2 - gap // 2)
+            else:
+                start_gap_index = int(self.mask_config[self.mask_mode]['start_gap_idx'] * self.sample_rate / 1000)
+            mask[..., start_gap_index:(start_gap_index + gap)] = 0
+        elif self.mask_mode == 'short':
+            num_gaps = int(self.mask_config[self.mask_mode]['num_gaps'])
+            gap_len = int(self.mask_config[self.mask_mode]['gap_length'] * self.sample_rate / 1000)
+            if self.mask_config[self.mask_mode]['start_gap_idx'] == "none":
+                start_gap_index = torch.randint(0, self.audio_len - gap_len, (num_gaps,))
+                for i in range(num_gaps):
+                    mask[..., start_gap_index[i]:(start_gap_index[i] + gap_len)] = 0
+            else:
+                start_gap_index = int(self.mask_config[self.mask_mode]['start_gap_idx'] * self.sample_rate / 1000)
+            mask[..., start_gap_index:(start_gap_index + gap)] = 0
+        elif self.mask_mode == 'file':
+            pass
+        else:
+            raise NotImplementedError(
+                f'Mask mode {self.mask_mode} has not been implemented.')
         return torch.from_numpy(1-mask)  # 1, L
 
 
