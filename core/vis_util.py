@@ -1,6 +1,7 @@
 import numpy as np
 import core.util as Util
-
+import matplotlib.pyplot as plt
+import os
 
 def create_image_grid(pred_l, pred_u, partial_gt, masked_input, gt_sample, n_rows=5):
     try:
@@ -44,6 +45,76 @@ def create_audio_row(pred_l, pred_u, masked_input, gt_sample):
     ]
 
     return audio_clips
+
+def cheack_overlapping(wandb_logger, pred_l, pred_u, masked_input, mask_audio):
+    # Convert tensors to NumPy arrays (assuming they are 1D vectors for audio)
+    pred_lower_bound_audio = pred_l.detach().cpu().numpy().squeeze()
+    pred_upper_bound_audio = pred_u.detach().cpu().numpy().squeeze()
+    masked_sample_audio = masked_input.detach().cpu().numpy().squeeze()
+    mask_audio = mask_audio.numpy().squeeze()
+    ci_intervals = (pred_upper_bound_audio-pred_lower_bound_audio)
+    gap_length = len(mask_audio[0][mask_audio[0]==0])
+    overlap_percentage_list = []
+    image_series = []
+    filenames = []
+    for i in range(pred_lower_bound_audio.shape[0]):
+        # Sum of the first 100 elements
+        cumsum_vector = np.cumsum(ci_intervals[i])
+        window_sums = cumsum_vector[gap_length:] - cumsum_vector[:-gap_length]
+        max_index = np.argmax(window_sums)
+        
+        #Create the mask for the higest CI vec (in length of the gap)
+        highlight_mask = np.zeros_like(ci_intervals[i])
+        highlight_mask[max_index:max_index + gap_length] = 1  # Mark the 100-length highest area
+
+        # find start and end idx of mask
+        min_mask = np.where(mask_audio[i]==0)[0].min()
+        max_mask = np.where(mask_audio[i]==0)[0].max()
+        
+        # Calculate the overlapping region
+        overlap_min = max(max_index, min_mask)
+        overlap_max = min(max_index+gap_length, max_mask)
+        if overlap_min < overlap_max:  # There is an overlap
+            overlap_percentage = (overlap_max - overlap_min)/gap_length*100
+        else:
+            overlap_percentage = 0
+        overlap_percentage_list.append(overlap_percentage)
+        
+        save_dir = 'figures_overlap'
+        os.makedirs(save_dir, exist_ok=True)
+        plt.figure(figsize=(10, 6))
+
+        # Plot the original vector
+        plt.plot(ci_intervals[i], label="CI", alpha=0.6)
+        # plt.plot(pred_lower_bound_audio, label="pred_l", alpha=0.6)
+        # plt.plot(pred_upper_bound_audio, label="pred_u", alpha=0.6)
+        # plt.plot(masked_sample_audio, label="masked_input", alpha=0.6)
+
+        # Shade the area for the highest 100 consecutive values
+        plt.axvspan(max_index, max_index + gap_length, color='red', alpha=0.3, label="Higest CI")
+
+        # Shade the area for the custom-defined mask
+        plt.axvspan(min_mask, max_mask, color='blue', alpha=0.3, label="Mask")
+
+        # Add labels and legend
+        plt.legend()
+        plt.title(f"overlap = {overlap_percentage:.2f}%")
+        plt.xlabel("t")
+        plt.ylabel("CI")
+
+        # Save the plot to a file and log it to wandb
+        plt.savefig(f"{save_dir}/test_audio_{i}.png")
+        plt.close()
+
+        img = plt.imread(f"{save_dir}/test_audio_{i}.png")
+
+        # Add the image to the series with an optional caption
+        image_series.append(img)
+        filenames.append(f'Image Series/test_audio_{i}')
+        # Concatenate all audio clips into one array
+        # Prepare audio clips and corresponding captions
+
+    return image_series, filenames, np.mean(overlap_percentage_list), np.median(overlap_percentage_list)
 
 def create_audio_grid(pred_l, pred_u, masked_input, gt_sample):
     audio_rows = []
