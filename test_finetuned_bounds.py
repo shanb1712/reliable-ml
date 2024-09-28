@@ -64,6 +64,7 @@ def run_test(diffusion_with_bounds, wandb_logger, device, test_step, test_loader
         all_test_pred_upper_bounds = torch.zeros((min(dataset_len, len(test_loader) * test_batch_size), n_img_channels, sr_res), device=device)
         all_test_gt_samples = torch.zeros((min(dataset_len, len(test_loader) * test_batch_size), n_img_channels, sr_res), device=device)
         all_test_maskes = torch.zeros((min(dataset_len, len(test_loader) * test_batch_size), n_img_channels, sr_res), device=device)
+        all_audio_maskes = torch.zeros((min(dataset_len, len(test_loader) * test_batch_size), n_img_channels, sr_res))
         all_test_partial_gt_images = torch.zeros((min(dataset_len, len(test_loader) * test_batch_size), n_img_channels, sr_res))
         all_test_masked_samples = torch.zeros((min(dataset_len, len(test_loader) * test_batch_size), n_img_channels, sr_res))
 
@@ -99,6 +100,7 @@ def run_test(diffusion_with_bounds, wandb_logger, device, test_step, test_loader
             all_test_partial_gt_images[start_idx:end_idx] = partial_gt
             all_test_maskes[start_idx:end_idx] = test_sampled_mask.detach().cpu()
             all_test_masked_samples[start_idx:end_idx] = test_masked_image.detach().cpu()
+            all_audio_maskes[start_idx:end_idx] = test_data["mask_audio"]
             # endregion
 
         # region NORM TO [0,1]
@@ -118,20 +120,33 @@ def run_test(diffusion_with_bounds, wandb_logger, device, test_step, test_loader
         calibrated_pred_risks_losses, calibrated_pred_sizes_mean, calibrated_pred_sizes_median, calibrated_pred_stratified_risks = get_rcps_metrics(pred_test_calibrated_l, pred_test_calibrated_u, all_test_gt_samples, all_test_maskes)
 
         if wandb_logger:
-            audio_clips = vis_util.create_audio_row(pred_l=pred_test_calibrated_l[0].detach().cpu(),
-                                           pred_u=pred_test_calibrated_u[0].detach().cpu(),
-                                           partial_gt=all_test_partial_gt_images[0].detach().cpu(),
-                                           masked_input=all_test_masked_samples[0],
-                                           gt_sample=all_test_gt_samples[0])
-            audio_logs = {
-                f"Finetune/Audio {caption}": wandb_logger._wandb.Audio(audio_clip, sample_rate=22050, caption=caption)
-                for audio_clip, caption in audio_clips}
+            images, filenames, mean_overlap, median_overlap = vis_util.cheack_overlapping(wandb_logger._wandb,pred_l=pred_test_calibrated_l.detach().cpu(),
+                                        pred_u =pred_test_calibrated_u.detach().cpu(),
+                                        masked_input=all_test_masked_samples,
+                                        mask_audio = all_audio_maskes)
+            image_series = [wandb_logger._wandb.Image(img, caption=filename) for img, filename in zip(images, filenames)]
+            wandb_logger._wandb.log({'Image Series':image_series})
 
-            wandb_logger._wandb.log(audio_logs)
+            wandb_logger.log_metrics({'Images/Mean overlap': mean_overlap, 'Test/Median overlap': median_overlap}, commit=True)
+            
+            audio_grid = vis_util.create_audio_grid(pred_test_calibrated_l.detach().cpu() * 2 - 1,
+                                           pred_test_calibrated_u.detach().cpu() * 2 - 1,
+                                           all_test_masked_samples.detach().cpu() * 2 - 1,
+                                           all_test_gt_samples.detach().cpu() * 2 - 1)
+            vis_util.log_audio_grid_as_list(wandb_logger._wandb, audio_grid[:4], sample_rate=22050)
+            # audio_clips = vis_util.create_audio_grid(pred_l=pred_test_calibrated_l[0].detach().cpu(),
+            #                                pred_u=pred_test_calibrated_u[0].detach().cpu(),
+            #                                masked_input=all_test_masked_samples[0],
+            #                                gt_sample=all_test_gt_samples[0])
+            # audio_logs = {
+            #     f"Finetune/Audio {caption}": wandb_logger._wandb.Audio(audio_clip, sample_rate=22050, caption=caption)
+            #     for audio_clip, caption in audio_clips}
 
-            wandb_logger.log_metrics({'Test/Calibrated Pred Risk': calibrated_pred_risks_losses, 'Test/test_step': test_step}, commit=False)
-            wandb_logger.log_metrics({'Test/Calibrated Pred Size Mean': calibrated_pred_sizes_mean, 'Test/test_step': test_step}, commit=False)
-            wandb_logger.log_metrics({'Test/Calibrated Pred Size Median': calibrated_pred_sizes_median, 'Test/test_step': test_step},commit=False)
+            # wandb_logger._wandb.log(audio_logs)
+
+            wandb_logger.log_metrics({'Test/Calibrated Pred Risk': calibrated_pred_risks_losses, 'Test/test_step': test_step}, commit=True)
+            wandb_logger.log_metrics({'Test/Calibrated Pred Size Mean': calibrated_pred_sizes_mean, 'Test/test_step': test_step}, commit=True)
+            wandb_logger.log_metrics({'Test/Calibrated Pred Size Median': calibrated_pred_sizes_median, 'Test/test_step': test_step},commit=True)
             calibrated_pred_stratified_risks_data = dict([[label, test] for (label, test) in
                                                           zip([
                                                                   "Test/Calibrated Pred Stratified Risks - Short",
@@ -140,7 +155,7 @@ def run_test(diffusion_with_bounds, wandb_logger, device, test_step, test_loader
                                                                   "Test/Calibrated Pred Stratified Risks - Long"],
                                                               calibrated_pred_stratified_risks.detach().cpu().numpy())])
             calibrated_pred_stratified_risks_data['Test/test_step'] = test_step
-            wandb_logger.log_metrics(calibrated_pred_stratified_risks_data)
+            wandb_logger.log_metrics(calibrated_pred_stratified_risks_data,commit=True)
 
 
 
@@ -231,7 +246,7 @@ if __name__ == '__main__':
     opt = Praser.parse(args)
 
     gpu_str = ','.join(str(x) for x in opt['gpu_ids'])
-    os.environ['CUDA_VISIBLE_DEVICES'] = gpu_str
+    os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
     opt['world_size'] = 1
     opt['var'] = args.var
