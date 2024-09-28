@@ -70,7 +70,7 @@
                     "mask_config": {
                         "mask_mode": "long",
                         "long": {
-                            "gap_length": 100, // in ms
+                            "gap_length": 500, // in ms
                             "start_gap_idx": "none"  //in ms, None means at the middle
                         },
                         "short": {
@@ -105,7 +105,7 @@
                     "mask_config": {
                         "mask_mode": "long",
                         "long": {
-                            "gap_length": 100, // in ms
+                            "gap_length": 500, // in ms
                             "start_gap_idx": "none"  //in ms, None means at the middle
                         },
                         "short": {
@@ -140,7 +140,7 @@
                     "mask_config": {
                         "mask_mode": "long",
                         "long": {
-                            "gap_length": 100, // in ms
+                            "gap_length": 500, // in ms
                             "start_gap_idx": "none"  //in ms, None means at the middle
                         },
                         "short": {

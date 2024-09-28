@@ -65,8 +65,8 @@ def init_obj(opt, logger, *args, default_file_name='default file', given_module=
             # ret = attr
         logger.info('{} [{:s}() form {:s}] is created.'.format(init_type, class_name, file_name))
     except Exception as e:
-        print(e)
         raise(e)
+        print(e)
     return ret
 
 

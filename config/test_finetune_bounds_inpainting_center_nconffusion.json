@@ -1,5 +1,5 @@
 {
-    "name": "finetune_nconffusion", // experiments name
+    "name": "test_nconffusion", // experiments name
     "gpu_ids": [0], // gpu ids list, default is single 0
     "seed" : -1, // random seed, seed <0 represents randomization not used 
     "finetune_norm": false, // find the parameters to optimize
@@ -10,7 +10,8 @@
         "tb_logger": "tb_logger", // path of tensorboard logger
         "results": "results",
         "checkpoint": "checkpoint",
-        "resume_state": "checkpoints/maestro/maestro_22k_8s-750000"
+        "resume_state": "checkpoints/maestro/maestro_22k_8s-750000",
+        "bounds_resume_state": "experiments/calibration_finetune_nconffusion_240927_131804_cXo4/checkpoint/best_network"
     },
 
     "datasets": { // train or test
@@ -58,7 +59,7 @@
                     "mask_config": {
                         "mask_mode": "long",
                         "long": {
-                            "gap_length": 100, // in ms
+                            "gap_length": 1000, // in ms
                             "start_gap_idx": "none"  //in ms, None means at the middle
                         },
                         "short": {
@@ -93,7 +94,7 @@
                     "mask_config": {
                         "mask_mode": "long",
                         "long": {
-                            "gap_length": 100, // in ms
+                            "gap_length": 1000, // in ms
                             "start_gap_idx": "none"  //in ms, None means at the middle
                         },
                         "short": {
@@ -128,7 +129,7 @@
                     "mask_config": {
                         "mask_mode": "long",
                         "long": {
-                            "gap_length": 100, // in ms
+                            "gap_length": 1000, // in ms
                             "start_gap_idx": "none"  //in ms, None means at the middle
                         },
                         "short": {

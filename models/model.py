@@ -257,40 +257,40 @@ class Palette(BaseModel):
                                                                      y_0=self.gt_image, mask=self.mask,
                                                                      sample_num=self.sample_num)
 
-                for soch_idx in tqdm.tqdm(range(n_soch_samples), desc=f'Stochastic sample for batch {sample_idx - 1}',
-                                          total=n_soch_samples):
-                    self.logger.info(f'Sample {sample_idx}, variation {soch_idx}...')
-                    self.output, self.visuals = self.netG.restoration(self.cond_image, y_t=self.gen_image,
-                                                                      y_0=self.gt_image,
-                                                                      sample_num=self.sample_num)
-
-                    calibrations_sample_variations[soch_idx] = self.output.detach().cpu()
-                sample_upper_bound = torch.quantile(calibrations_sample_variations, upper_quantile, dim=0)
-                sample_lower_bound = torch.quantile(calibrations_sample_variations, lower_quantile, dim=0)
-
+                # for soch_idx in tqdm.tqdm(range(n_soch_samples), desc=f'Stochastic sample for batch {sample_idx - 1}',
+                #                           total=n_soch_samples):
+                #     self.logger.info(f'Sample {sample_idx}, variation {soch_idx}...')
+                #     self.output, self.visuals = self.netG.restoration(self.cond_image, y_t=self.gen_image,
+                #                                                       y_0=self.gt_image,
+                #                                                       sample_num=self.sample_num)
+                #
+                #     calibrations_sample_variations[soch_idx] = self.output.detach().cpu()
+                # sample_upper_bound = torch.quantile(calibrations_sample_variations, upper_quantile, dim=0)
+                # sample_lower_bound = torch.quantile(calibrations_sample_variations, lower_quantile, dim=0)
+                #
                 filename_suffix = f'_{n_soch_samples}soch_smpls'
-                calibration_upper_bounds = sample_upper_bound
-                calibration_lower_bounds = sample_lower_bound
-                samples_masks = phase_data['mask']
-                masked_samples = phase_data["cond_image"]
+                # calibration_upper_bounds = sample_upper_bound
+                # calibration_lower_bounds = sample_lower_bound
+                # samples_masks = phase_data['mask']
+                # masked_samples = phase_data["cond_image"]
                 sample_file_name = ".".join(phase_data['path'][0].split(".")[
                                             0:-1])  # This is in order to trim the file extension but handle filenames with multiple .'s
                 self.iter += self.batch_size
-
-                os.makedirs(f'{bounds_path}/upper_bounds/', exist_ok=True)
-                os.makedirs(f'{bounds_path}/lower_bounds/', exist_ok=True)
-                os.makedirs(f'{bounds_path}/masked_samples/', exist_ok=True)
-                os.makedirs(f'{bounds_path}/masks/', exist_ok=True)
+                #
+                # os.makedirs(f'{bounds_path}/upper_bounds/', exist_ok=True)
+                # os.makedirs(f'{bounds_path}/lower_bounds/', exist_ok=True)
+                # os.makedirs(f'{bounds_path}/masked_samples/', exist_ok=True)
+                # os.makedirs(f'{bounds_path}/masks/', exist_ok=True)
                 os.makedirs(f'{bounds_path}/gen_samples/', exist_ok=True)
 
-                torch.save(calibration_upper_bounds,
-                           f'{bounds_path}/upper_bounds/{sample_file_name}_{masking_type}_sampled_upper_bounds{filename_suffix}.pt')
-                torch.save(calibration_lower_bounds,
-                           f'{bounds_path}/lower_bounds/{sample_file_name}_{masking_type}_sampled_lower_bounds{filename_suffix}.pt')
-                torch.save(masked_samples,
-                           f'{bounds_path}/masked_samples/{sample_file_name}_{masking_type}_masked_samples{filename_suffix}.pt')
-                torch.save(samples_masks,
-                           f'{bounds_path}/masks/{sample_file_name}_{masking_type}_masks{filename_suffix}.pt')
+                # torch.save(calibration_upper_bounds,
+                #            f'{bounds_path}/upper_bounds/{sample_file_name}_{masking_type}_sampled_upper_bounds{filename_suffix}.pt')
+                # torch.save(calibration_lower_bounds,
+                #            f'{bounds_path}/lower_bounds/{sample_file_name}_{masking_type}_sampled_lower_bounds{filename_suffix}.pt')
+                # torch.save(masked_samples,
+                # #            f'{bounds_path}/masked_samples/{sample_file_name}_{masking_type}_masked_samples{filename_suffix}.pt')
+                # torch.save(samples_masks,
+                #            f'{bounds_path}/masks/{sample_file_name}_{masking_type}_masks{filename_suffix}.pt')
                 torch.save(self.gen_image,
                            f'{bounds_path}/gen_samples/{sample_file_name}_{masking_type}_gen_samples{filename_suffix}.pt')
 

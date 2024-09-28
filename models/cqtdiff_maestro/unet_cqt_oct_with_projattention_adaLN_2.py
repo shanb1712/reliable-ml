@@ -10,7 +10,7 @@ from cqt_nsgt_pytorch import CQT_nsgt
 import torchaudio
 import einops
 import math
-
+from ..guided_diffusion_modules.nn import zero_module
 """
 As similar as possible to the original CQTdiff architecture, but using the octave-base representation of the CQT
 This should be more memory efficient, and also more efficient in terms of computation, specially when using higher sampling rates.
@@ -597,7 +597,7 @@ class Unet_CQT_oct_with_attention(nn.Module):
         #assert self.depth==args.network.depth, "The depth of the network should be the sum of the inner depth and the number of octaves" #make sure we are aware of the depth of the network
 
         init = dict(init_mode='kaiming_uniform', init_weight=np.sqrt(1/3)) #same as ADM, according to edm implementation
-        init_zero = dict(init_mode='kaiming_uniform', init_weight=1e-7) #I think it is safer to initialize the last layer with a small weight, rather than zero. Breaking symmetry and all that. 
+        init_zero = dict(init_mode='kaiming_uniform', init_weight=1e-7) #I think it is safer to initialize the last layer with a small weight, rather than zero. Breaking symmetry and all that.
 
 
 
@@ -607,7 +607,7 @@ class Unet_CQT_oct_with_attention(nn.Module):
 
         #fmax=self.args.exp.sample_rate/2
         #self.fmin=fmax/(2**self.args.cqt.numocts)
-        self.fbins=int(self.args.network.cqt.bins_per_oct*self.args.network.cqt.num_octs) 
+        self.fbins=int(self.args.network.cqt.bins_per_oct*self.args.network.cqt.num_octs)
         self.device=device
         self.bins_per_oct=self.args.network.cqt.bins_per_oct
         self.num_octs=self.args.network.cqt.num_octs
@@ -617,15 +617,15 @@ class Unet_CQT_oct_with_attention(nn.Module):
         else:
             win=self.args.network.cqt.window
 
+        self.finetune_bounds = args.network.finetune_bounds
         self.CQTransform=CQT_nsgt(self.args.network.cqt.num_octs, self.args.network.cqt.bins_per_oct, mode="oct",window=win,fs=self.args.exp.sample_rate, audio_len=self.args.exp.audio_len, dtype=torch.float32, device=self.device)
-
 
         self.f_dim=self.fbins #assuming we have thrown away the DC component and the Nyquist frequency
 
         self.use_fencoding=self.args.network.use_fencoding
         if self.use_fencoding:
             N_freq_encoding=32
-    
+
             self.freq_encodings=nn.ModuleList([])
             for i in range(self.num_octs):
                 self.freq_encodings.append(AddFreqEncodingRFF(self.bins_per_oct,N_freq_encoding))
@@ -639,7 +639,7 @@ class Unet_CQT_oct_with_attention(nn.Module):
 
         self.num_dils= self.args.network.num_dils #intuition: less dilations for the first layers and more for the deeper layers
         #self.inner_num_dils=self.args.network.inner_num_dils
-        
+
         self.attention_dict=self.args.network.attention_dict
         #self.attention_Ns=self.args.network.attention_Ns
 
@@ -650,11 +650,16 @@ class Unet_CQT_oct_with_attention(nn.Module):
 
         self.downs=nn.ModuleList([])
         self.middle=nn.ModuleList([])
-        self.ups=nn.ModuleList([])
+
+        if self.finetune_bounds:
+            self.ups_upper = nn.ModuleList([])
+            self.ups_lower = nn.ModuleList([])
+        else:
+            self.ups=nn.ModuleList([])
 
         self.attention_layers=self.args.network.attention_layers
         #sth like [0,0,0,0,0,0,1,1]
-        
+
         for i in range(self.num_octs):
             if i==0:
                 dim_in=self.Ns[i]
@@ -685,18 +690,18 @@ class Unet_CQT_oct_with_attention(nn.Module):
                     #assert attn_dict.N > 0
                 else:
                     attn_dict=None
-    
+
                 self.middle.append(nn.ModuleList([
                                 ResnetBlock(self.Ns[-1], 2, use_norm=self.use_norm,num_dils= 1,bias=False, kernel_size=(1,1), proj_place="after", emb_dim=self.emb_dim, init=init, init_zero=init_zero),
                                 ResnetBlock(self.Ns[-1], self.Ns[-1], self.use_norm, num_dils=self.num_dils[-1], bias=False, emb_dim=self.emb_dim,attention_dict=attn_dict, init=init, init_zero=init_zero,
                                 Fdim=(self.num_octs)*self.bins_per_oct)]))
         else:
             raise NotImplementedError("bottleneck type not implemented")
-                        
+
 
 
         #self.pyr_up_proj_first=nn.Conv2d(dim_out, 2, (5,3), padding="same", padding_mode="zeros", bias=False)
-        
+
         for i in range(self.num_octs-1,-1,-1):
 
             if i==0:
@@ -714,20 +719,33 @@ class Unet_CQT_oct_with_attention(nn.Module):
             else:
                 attn_dict=None
 
-            self.ups.append(nn.ModuleList(
-                                        [
-                                        ResnetBlock(dim_out, 2, use_norm=self.use_norm,num_dils= 1,bias=False, kernel_size=(1,1), proj_place="after", emb_dim=self.emb_dim, init=init, init_zero=init_zero),
-                                        ResnetBlock(dim_in, dim_out, use_norm=self.use_norm,num_dils= self.num_dils[i],attention_dict=attn_dict, bias=False, emb_dim=self.emb_dim, init=init, init_zero=init_zero, Fdim=(i+1)*self.bins_per_oct),
-                                        ]))
+            if self.finetune_bounds:
+                self.ups_upper.append(nn.ModuleList(
+                    [
+                        ResnetBlock(dim_out, 2, use_norm=self.use_norm, num_dils=1, bias=False, kernel_size=(1, 1),
+                                    proj_place="after", emb_dim=self.emb_dim, init=init, init_zero=init_zero),
+                        ResnetBlock(dim_in, dim_out, use_norm=self.use_norm, num_dils=self.num_dils[i],
+                                    attention_dict=attn_dict, bias=False, emb_dim=self.emb_dim, init=init,
+                                    init_zero=init_zero, Fdim=(i + 1) * self.bins_per_oct),
+                    ]))
+
+                self.ups_lower.append(nn.ModuleList(
+                    [
+                        ResnetBlock(dim_out, 2, use_norm=self.use_norm, num_dils=1, bias=False, kernel_size=(1, 1),
+                                    proj_place="after", emb_dim=self.emb_dim, init=init, init_zero=init_zero),
+                        ResnetBlock(dim_in, dim_out, use_norm=self.use_norm, num_dils=self.num_dils[i],
+                                    attention_dict=attn_dict, bias=False, emb_dim=self.emb_dim, init=init,
+                                    init_zero=init_zero, Fdim=(i + 1) * self.bins_per_oct),
+                    ]))
+            else:
+                self.ups.append(nn.ModuleList(
+                                            [
+                                            ResnetBlock(dim_out, 2, use_norm=self.use_norm,num_dils= 1,bias=False, kernel_size=(1,1), proj_place="after", emb_dim=self.emb_dim, init=init, init_zero=init_zero),
+                                            ResnetBlock(dim_in, dim_out, use_norm=self.use_norm,num_dils= self.num_dils[i],attention_dict=attn_dict, bias=False, emb_dim=self.emb_dim, init=init, init_zero=init_zero, Fdim=(i+1)*self.bins_per_oct),
+                                            ]))
 
 
-
-        #self.cropconcat = CropConcatBlock()
-
-
-
-
-    def forward(self, inputs, sigma):
+    def forward(self, inputs, sigma, out_upper_lower=False):
         """
         Args: 
             inputs (Tensor):  Input signal in time-domsin, shape (B,T)
@@ -803,46 +821,134 @@ class Unet_CQT_oct_with_attention(nn.Module):
                 X=ResBlock(X, sigma)   
                 Xout=OutBlock(X,sigma)
 
+        if out_upper_lower:
+            X_lower = X.clone()
+            Xout_lower = Xout.clone()
+            X_list_out_lower = X_list.copy()
+            hs_lower = hs.copy()
 
-        for i,modules in enumerate(self.ups):
-            j=len(self.ups) -i-1
-            #print("upsampler", j)
+            X_upper = X
+            Xout_upper = Xout
+            X_list_out_upper = X_list
+            hs_upper = hs
 
-            OutBlock,  ResBlock=modules
+            for i,modules in enumerate(self.ups_lower):
+                j=len(self.ups_lower) -i-1
+                #print("upsampler", j)
 
-            skip=hs.pop()
-            X=torch.cat((X,skip),dim=1)
-            X=ResBlock(X, sigma)
-            
-            Xout=(Xout+OutBlock(X,sigma))/(2**0.5)
+                OutBlock,  ResBlock=modules
+
+                skip=hs_lower.pop()
+                X_lower=torch.cat((X_lower,skip),dim=1)
+                X_lower=ResBlock(X_lower, sigma)
+
+                Xout_lower=(Xout_lower+OutBlock(X_lower,sigma))/(2**0.5)
 
 
-            if j<=(self.num_octs-1):
-                X= X[:,:,self.bins_per_oct::,:]
-                Out, Xout= Xout[:,:,0:self.bins_per_oct,:], Xout[:,:,self.bins_per_oct::,:]
-                #pyr_out, pyr= pyr[:,:,0:self.bins_per_oct,:], pyr[:,:,self.bins_per_oct::,:]
-                #X_out=(pyr_up_proj(X_out)+pyr_out)/(2**0.5)
+                if j<=(self.num_octs-1):
+                    X_lower= X_lower[:,:,self.bins_per_oct::,:]
+                    Out_lower, Xout_lower= Xout_lower[:,:,0:self.bins_per_oct,:], Xout_lower[:,:,self.bins_per_oct::,:]
+                    #pyr_out, pyr= pyr[:,:,0:self.bins_per_oct,:], pyr[:,:,self.bins_per_oct::,:]
+                    #X_out=(pyr_up_proj(X_out)+pyr_out)/(2**0.5)
 
-                Out=Out.permute(0,2,3,1).contiguous() #call contiguous() here?
-                Out=torch.view_as_complex(Out)
+                    Out_lower=Out_lower.permute(0,2,3,1).contiguous() #call contiguous() here?
+                    Out_lower=torch.view_as_complex(Out_lower)
 
-                #save output
-                X_list_out[i]=Out.unsqueeze(1)
+                    #save output
+                    X_list_out_lower[i]=Out_lower.unsqueeze(1)
 
-            elif j>(self.num_octs-1):
-                print("We should not be here")
-                pass
+                elif j>(self.num_octs-1):
+                    print("We should not be here")
+                    pass
 
-            if j>0 and j<=(self.num_octs-1):
-                #pyr=self.upsampler(pyr) #call contiguous() here?
-                X=self.upsamplerT(X) #call contiguous() here?
-                Xout=self.upsamplerT(Xout) #call contiguous() here?
+                if j>0 and j<=(self.num_octs-1):
+                    #pyr=self.upsampler(pyr) #call contiguous() here?
+                    X_lower=self.upsamplerT(X_lower) #call contiguous() here?
+                    Xout_lower=self.upsamplerT(Xout_lower) #call contiguous() here?
 
-        pred_time=self.CQTransform.bwd(X_list_out)
-        pred_time=pred_time.squeeze(1)
-        pred_time=pred_time[:,0:inputs.shape[-1]]
-        assert pred_time.shape==inputs.shape, "bad shapes"
-        return pred_time
+            for i, modules in enumerate(self.ups_upper):
+                j = len(self.ups_upper) - i - 1
+                # print("upsampler", j)
+
+                OutBlock, ResBlock = modules
+
+                skip = hs_upper.pop()
+                X_upper = torch.cat((X_upper, skip), dim=1)
+                X_upper = ResBlock(X_upper, sigma)
+
+                Xout_upper = (Xout_upper + OutBlock(X_upper, sigma)) / (2 ** 0.5)
+
+                if j <= (self.num_octs - 1):
+                    X_upper = X_upper[:, :, self.bins_per_oct::, :]
+                    out_upper, Xout_upper = Xout_upper[:, :, 0:self.bins_per_oct, :], Xout_upper[:, :,
+                                                                                      self.bins_per_oct::, :]
+                    # pyr_out, pyr= pyr[:,:,0:self.bins_per_oct,:], pyr[:,:,self.bins_per_oct::,:]
+                    # X_out=(pyr_up_proj(X_out)+pyr_out)/(2**0.5)
+
+                    out_upper = out_upper.permute(0, 2, 3, 1).contiguous()  # call contiguous() here?
+                    out_upper = torch.view_as_complex(out_upper)
+
+                    # save output
+                    X_list_out_upper[i] = out_upper.unsqueeze(1)
+
+                elif j > (self.num_octs - 1):
+                    print("We should not be here")
+                    pass
+
+                if j > 0 and j <= (self.num_octs - 1):
+                    # pyr=self.upsampler(pyr) #call contiguous() here?
+                    X_upper = self.upsamplerT(X_upper)  # call contiguous() here?
+                    Xout_upper = self.upsamplerT(Xout_upper)  # call contiguous() here?
+
+            pred_time_lower = self.CQTransform.bwd(X_list_out_lower)
+            pred_time_lower = pred_time_lower.squeeze(1)
+            pred_time_lower = pred_time_lower[:, 0:inputs.shape[-1]]
+
+            pred_time_upper = self.CQTransform.bwd(X_list_out_upper)
+            pred_time_upper = pred_time_upper.squeeze(1)
+            pred_time_upper = pred_time_upper[:, 0:inputs.shape[-1]]
+
+            assert (pred_time_lower.shape == inputs.shape) and (pred_time_upper.shape == inputs.shape), "bad shapes"
+            return pred_time_lower, pred_time_upper
+        else:
+            for i, modules in enumerate(self.ups):
+                j = len(self.ups) - i - 1
+                # print("upsampler", j)
+
+                OutBlock, ResBlock = modules
+
+                skip = hs.pop()
+                X = torch.cat((X, skip), dim=1)
+                X = ResBlock(X, sigma)
+
+                Xout = (Xout + OutBlock(X, sigma)) / (2 ** 0.5)
+
+                if j <= (self.num_octs - 1):
+                    X = X[:, :, self.bins_per_oct::, :]
+                    Out, Xout = Xout[:, :, 0:self.bins_per_oct, :], Xout[:, :, self.bins_per_oct::, :]
+                    # pyr_out, pyr= pyr[:,:,0:self.bins_per_oct,:], pyr[:,:,self.bins_per_oct::,:]
+                    # X_out=(pyr_up_proj(X_out)+pyr_out)/(2**0.5)
+
+                    Out = Out.permute(0, 2, 3, 1).contiguous()  # call contiguous() here?
+                    Out = torch.view_as_complex(Out)
+
+                    # save output
+                    X_list_out[i] = Out.unsqueeze(1)
+
+                elif j > (self.num_octs - 1):
+                    print("We should not be here")
+                    pass
+
+                if j > 0 and j <= (self.num_octs - 1):
+                    # pyr=self.upsampler(pyr) #call contiguous() here?
+                    X = self.upsamplerT(X)  # call contiguous() here?
+                    Xout = self.upsamplerT(Xout)  # call contiguous() here?
+
+            pred_time = self.CQTransform.bwd(X_list_out)
+            pred_time = pred_time.squeeze(1)
+            pred_time = pred_time[:, 0:inputs.shape[-1]]
+            assert pred_time.shape == inputs.shape, "bad shapes"
+            return pred_time
 
             
 
@@ -879,4 +985,3 @@ class CropConcatBlock(nn.Module):
                                         width_diff: (x2_shape[3] + width_diff)]
         x = torch.cat((down_layer_cropped, x),1)
         return x
-

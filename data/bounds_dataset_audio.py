@@ -13,7 +13,32 @@ def is_audio_file(filename):
     return any(filename.endswith(extension) for extension in AUD_EXTENSIONS)
 
 
-def make_dataset(dir, masked_length):
+def make_dataset(dir, masked_length, max_iterations=None):
+    if os.path.isfile(dir):
+        audios = [i for i in np.genfromtxt(dir, dtype=np.str, encoding='utf-8')]
+    else:
+        audios = []
+        assert os.path.isdir(dir), '%s is not a valid directory' % dir
+        iteration_count = 0  # Initialize iteration counter
+        for root, _, fnames in sorted(os.walk(dir)):
+            for fname in sorted(fnames):
+                if is_audio_file(fname):
+                    path = os.path.join(root, fname)
+                    audios.append(path)
+
+                    # Increment iteration counter and check against max_iterations
+                    iteration_count += 1
+                    if max_iterations is not None and iteration_count >= max_iterations:
+                        break  # Stop inner loop
+
+            # Stop outer loop if max_iterations reached
+            if max_iterations is not None and iteration_count >= max_iterations:
+                break
+
+    return audios
+
+
+def make_dataset_extracted_bounds(dir):
     if os.path.isfile(dir):
         audios = [i for i in np.genfromtxt(dir, dtype=np.str, encoding='utf-8')]
     else:
@@ -21,9 +46,9 @@ def make_dataset(dir, masked_length):
         assert os.path.isdir(dir), '%s is not a valid directory' % dir
         for root, _, fnames in sorted(os.walk(dir)):
             for fname in sorted(fnames):
-                if is_audio_file(fname):
-                    path = os.path.join(root, fname)
-                    audios.append(path)
+                path = os.path.join(root, fname)
+                audios.append(path)
+
     return audios
 
 
@@ -51,27 +76,37 @@ class InpaintDataset(data.Dataset):
         self.load_len = load_len  # length of segment from the audio
         self.masked_length = self.mask_config[self.mask_mode]['gap_length']
         self.audios = make_dataset(data_root, self.masked_length)
+        self.gen_samples = make_dataset_extracted_bounds(f"{sampled_bounds_path}/{self.masked_length}/gen_samples")
+
         if skip_n_samples > 0:
             self.audios = self.audios[skip_n_samples:]
+            self.gen_samples = self.gen_samples[skip_n_samples:]
+
         if self.data_len > 0:
             self.audios = self.audios[:int(data_len)]
-
+            self.gen_samples = self.gen_samples[:int(data_len)]
 
         self.load_dataset()
 
     def __getitem__(self, index):
         ret = {}
         original = torch.from_numpy(self.test_samples[index])[None, :]
-        mask = self.get_mask()
+        mask = 1. - torch.from_numpy(1-np.ones((1, self.audio_len)))
+        mask_gap = 1. - self.get_mask()
+        generated = torch.load(self.gen_samples[index], map_location=mask.device).type(torch.float64)
 
         seg = resample_audio(original, torch.from_numpy(np.array(self.f_s[index])), self.sample_rate, self.audio_len)
-        mask_audio = seg * mask
+        seg = seg.to(torch.float32)
+        mask_audio = seg * (1.- mask)
 
-        cond_audio = seg * mask + (1. - mask) * torch.randn_like(seg)
+        # cond_audio = seg * mask + (1. - mask) * torch.randn_like(seg)
+        cond_audio = generated
 
         ret['gt_image'] = seg
+        ret['gen_image'] = generated
         ret['cond_image'] = cond_audio
         ret['mask_image'] = mask_audio
+        ret['mask_audio'] = mask_gap
         ret['mask'] = mask
         ret['path'] = self.audios[index].rsplit("/")[-1].rsplit("\\")[-1]
 
@@ -124,7 +159,7 @@ class InpaintDataset(data.Dataset):
         else:
             raise NotImplementedError(
                 f'Mask mode {self.mask_mode} has not been implemented.')
-        return torch.from_numpy(mask)  # 1, L
+        return torch.from_numpy(1-mask)  # 1, L
 
 
 class UncroppingDataset(data.Dataset):

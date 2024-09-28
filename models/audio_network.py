@@ -151,6 +151,30 @@ class Audio_Network(BaseNetwork):
 
     def load_checkpoint(self, path, map_location):
         state_dict = torch.load(path, map_location=map_location)
+        if self.network.finetune_bounds:
+            from collections import OrderedDict
+            new_state_dict_network = OrderedDict()
+            new_state_dict_ema = OrderedDict()
+            for k, v in state_dict['network'].items():
+                if 'ups.' in k:
+                    name_upper = k.replace("ups", "ups_upper")
+                    name_lower = k.replace("ups", "ups_lower")
+                    new_state_dict_network[name_upper] = v
+                    new_state_dict_network[name_lower] = v
+                else:
+                    new_state_dict_network[k] = v
+            for k, v in state_dict['ema'].items():
+                if 'ups.' in k:
+                    name_upper = k.replace("ups", "ups_upper")
+                    name_lower = k.replace("ups", "ups_lower")
+                    new_state_dict_ema[name_upper] = v
+                    new_state_dict_ema[name_lower] = v
+                else:
+                    new_state_dict_ema[k] = v
+            state_dict.pop('network')
+            state_dict.pop('ema')
+            state_dict['network'] = new_state_dict_network
+            state_dict['ema'] = new_state_dict_ema
         try:
             self.it = state_dict['it']
         except:
